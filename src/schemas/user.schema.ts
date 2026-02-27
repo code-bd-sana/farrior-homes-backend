@@ -36,7 +36,7 @@ export class User {
   @Prop({ required: false, trim: true })
   officeAddress?: string;
 
-  @Prop({ required: false })
+  @Prop({ required: false, select: false })
   password?: string;
 
   @Prop({ trim: true })
@@ -53,6 +53,9 @@ export class User {
 
   @Prop({ trim: true })
   linkedinLink?: string;
+
+  @Prop({ default: false })
+  isSuspended?: boolean;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

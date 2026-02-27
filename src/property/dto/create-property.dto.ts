@@ -7,12 +7,7 @@ import {
   IsUrl,
   Min,
 } from 'class-validator';
-
-export enum PropertyStatus {
-  PENDING = 'pending',
-  ACTIVE = 'active',
-  BAN = 'ban',
-}
+import { PropertyStatus } from 'src/schemas/property.schema';
 
 export class CreatePropertyDto {
   @IsString({ message: 'Property name is required' })

@@ -16,6 +16,9 @@ export class User {
   @Prop({ required: true, unique: true, trim: true, lowercase: true })
   email: string;
 
+  @Prop({ trim: true, unique: true, sparse: true })
+  googleId?: string;
+
   // user role can be either USER or ADMIN, default is USER
   @Prop({ enum: UserRole, default: UserRole.USER })
   role?: UserRole;
@@ -24,14 +27,14 @@ export class User {
   // can upload image as file or provide image url
   profileImage?: string;
 
-  @Prop({ required: true, unique: true, trim: true })
-  phone: string;
+  @Prop({ required: false, unique: true, sparse: true, trim: true })
+  phone?: string;
 
-  @Prop({ required: true, trim: true })
-  homeAddress: string;
+  @Prop({ required: false, trim: true })
+  homeAddress?: string;
 
-  @Prop({ required: true, trim: true })
-  officeAddress: string;
+  @Prop({ required: false, trim: true })
+  officeAddress?: string;
 
   @Prop({ required: false })
   password?: string;

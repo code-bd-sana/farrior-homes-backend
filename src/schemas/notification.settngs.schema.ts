@@ -16,7 +16,7 @@ export class NotificationSettings {
   @Prop({ required: true, unique: true })
   name: NotificationType;
   @Prop({ required: true, unique: true })
-  title: NotificationSettingsTitle;
+  title: string;
   @Prop({ required: true })
   isActive: boolean;
   @Prop({ required: true })

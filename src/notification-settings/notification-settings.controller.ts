@@ -1,28 +1,13 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-} from '@nestjs/common';
-import { NotificationSettingsService } from './notification-settings.service';
+import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 import { CreateNotificationSettingDto } from './dto/create-notification-setting.dto';
 import { UpdateNotificationSettingDto } from './dto/update-notification-setting.dto';
+import { NotificationSettingsService } from './notification-settings.service';
 
 @Controller('notification-settings')
 export class NotificationSettingsController {
   constructor(
     private readonly notificationSettingsService: NotificationSettingsService,
   ) {}
-
-  @Post()
-  create(@Body() createNotificationSettingDto: CreateNotificationSettingDto) {
-    return this.notificationSettingsService.create(
-      createNotificationSettingDto,
-    );
-  }
 
   @Get()
   findAll() {
@@ -40,7 +25,7 @@ export class NotificationSettingsController {
     @Body() updateNotificationSettingDto: UpdateNotificationSettingDto,
   ) {
     return this.notificationSettingsService.update(
-      +id,
+      id,
       updateNotificationSettingDto,
     );
   }

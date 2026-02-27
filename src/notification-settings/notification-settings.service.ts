@@ -1,9 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { CreateNotificationSettingDto } from './dto/create-notification-setting.dto';
-import { UpdateNotificationSettingDto } from './dto/update-notification-setting.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { NotificationSettings } from 'src/schemas/notification.settngs.schema';
+import { UpdateNotificationSettingDto } from './dto/update-notification-setting.dto';
 
 @Injectable()
 export class NotificationSettingsService {
@@ -12,30 +11,41 @@ export class NotificationSettingsService {
     private readonly notificationSettingModel: Model<NotificationSettings>,
   ) {}
 
-  async create(createNotificationSettingDto: CreateNotificationSettingDto) {
-    const newNotificationSetting = new this.notificationSettingModel(
-      createNotificationSettingDto,
-    );
-    const created = await newNotificationSetting.save();
-    return created;
+  // async create(createNotificationSettingDto: CreateNotificationSettingDto) {
+  //   const newNotificationSetting = new this.notificationSettingModel(
+  //     createNotificationSettingDto,
+  //   );
+  //   const created = await newNotificationSetting.save();
+  //   return created;
+  // }
+
+  // find all notificaiton
+
+  async findAll() {
+    const notifications = await this.notificationSettingModel.find();
+    return notifications;
   }
 
-  findAll() {
-    return `This action returns all notificationSettings`;
+  // get single notificaiton detiails if needed
+  async findOne(id: string) {
+    const notificationSetting = await this.notificationSettingModel.findOne({
+      _id: id,
+    });
+    return notificationSetting;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} notificationSetting`;
-  }
-
-  update(
-    id: number,
+  async update(
+    id: string,
     updateNotificationSettingDto: UpdateNotificationSettingDto,
   ) {
-    return `This action updates a #${id} notificationSetting`;
+    const updated = await this.notificationSettingModel.updateOne(
+      { _id: id },
+      { $set: UpdateNotificationSettingDto },
+    );
+    return updated;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} notificationSetting`;
-  }
+  // remove(id: number) {
+  //   return `This action removes a #${id} notificationSetting`;
+  // }
 }

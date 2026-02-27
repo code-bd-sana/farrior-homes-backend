@@ -1,10 +1,5 @@
-import { Prop, Schema } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
-
-export enum PropertyType {
-  FOR_SALE = 'FOR_SALE',
-  FOR_RENT = 'FOR_RENT',
-}
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import mongoose, { HydratedDocument, Types } from 'mongoose';
 
 export enum PropertyStatus {
   PENDING = 'pending',
@@ -13,17 +8,15 @@ export enum PropertyStatus {
 }
 
 @Schema({ timestamps: true })
-export class Property extends Document {
-  @Prop({ required: true })
+export class Property {
+  @Prop({ required: true, trim: true })
   propertyName: string;
 
-  @Prop({ required: true })
-  address: string;
-
-  @Prop({ required: true, enum: PropertyType })
-  propertyType: PropertyType;
-
-  @Prop({ required: true, enum: PropertyStatus })
+  @Prop({
+    required: true,
+    enum: PropertyStatus,
+    default: PropertyStatus.PENDING,
+  })
   status: PropertyStatus;
 
   @Prop({ required: true, type: String })
@@ -32,19 +25,19 @@ export class Property extends Document {
   @Prop({ required: true, type: String })
   keyFeatures: string;
 
-  @Prop({ required: true, type: Number })
+  @Prop({ required: true, type: Number, min: 0 })
   bedrooms: number;
 
-  @Prop({ required: true, type: Number })
+  @Prop({ required: true, type: Number, min: 0 })
   bathrooms: number;
 
-  @Prop({ required: true, type: Number })
+  @Prop({ required: true, type: Number, min: 0 })
   squareFeet: number;
 
-  @Prop({ required: true, type: Number })
+  @Prop({ required: true, type: Number, min: 0 })
   lotSize: number;
 
-  @Prop({ required: true, type: Number })
+  @Prop({ required: true, type: Number, min: 0 })
   price: number;
 
   @Prop({ required: true, type: Number })
@@ -58,7 +51,10 @@ export class Property extends Document {
 
   @Prop({ type: String, default: '' })
   locationMapLink: string;
+
+  // @Prop({ type: Types.ObjectId, required: true })
+  // propertyOwner: Types.ObjectId;
 }
 
-
-//ay hai
+export type PropertyDocument = HydratedDocument<Property>;
+export const PropertySchema = SchemaFactory.createForClass(Property);

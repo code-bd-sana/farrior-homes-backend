@@ -10,13 +10,11 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import 'dotenv/config';
-import express from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import * as path from 'path';
 import { AppModule } from './app.module';
-import { ResponseInterceptorInterceptor } from './common/interceptor/response-interceptor/response-interceptor.interceptor';
 import { HttpExceptionFilter } from './common/filter/exception-response/exception-response.filter';
+import { ResponseInterceptorInterceptor } from './common/interceptor/response-interceptor/response-interceptor.interceptor';
 import { config } from './config/app.config';
 
 /**

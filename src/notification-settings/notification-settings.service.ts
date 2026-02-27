@@ -1,0 +1,51 @@
+import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { NotificationSettings } from 'src/schemas/notification.settngs.schema';
+import { UpdateNotificationSettingDto } from './dto/update-notification-setting.dto';
+
+@Injectable()
+export class NotificationSettingsService {
+  constructor(
+    @InjectModel(NotificationSettings.name)
+    private readonly notificationSettingModel: Model<NotificationSettings>,
+  ) {}
+
+  // async create(createNotificationSettingDto: CreateNotificationSettingDto) {
+  //   const newNotificationSetting = new this.notificationSettingModel(
+  //     createNotificationSettingDto,
+  //   );
+  //   const created = await newNotificationSetting.save();
+  //   return created;
+  // }
+
+  // find all notificaiton
+
+  async findAll() {
+    const notifications = await this.notificationSettingModel.find();
+    return notifications;
+  }
+
+  // get single notificaiton detiails if needed
+  async findOne(id: string) {
+    const notificationSetting = await this.notificationSettingModel.findOne({
+      _id: id,
+    });
+    return notificationSetting;
+  }
+
+  async update(
+    id: string,
+    updateNotificationSettingDto: UpdateNotificationSettingDto,
+  ) {
+    const updated = await this.notificationSettingModel.updateOne(
+      { _id: id },
+      { $set: UpdateNotificationSettingDto },
+    );
+    return updated;
+  }
+
+  // remove(id: number) {
+  //   return `This action removes a #${id} notificationSetting`;
+  // }
+}

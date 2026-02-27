@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CreatePropertyDto } from './dto/create-property.dto';
@@ -18,16 +18,30 @@ export class PropertyService {
     return createdProperty.save();
   }
 
-  findAll() {
-    return `This action returns all property`;
+  // Find All Property
+  findAll(limit = 10, skip = 0, searchQuery = {}) {
+    const property = this.propertyModel
+      .find(searchQuery)
+      .limit(limit)
+      .skip(skip);
+    return property;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} property`;
+  // Find single property using id
+
+  findOne(id: string) {
+    const property = this.propertyModel.findOne({ _id: id });
+    return property;
   }
 
-  update(id: number, updatePropertyDto: UpdatePropertyDto) {
-    return `This action updates a #${id} property`;
+  update(id: string, updatePropertyDto: UpdatePropertyDto) {
+    const updated = this.propertyModel.updateOne(
+      { _id: id },
+      {
+        $set: updatePropertyDto,
+      },
+    );
+    return updated;
   }
 
   remove(id: number) {

@@ -11,7 +11,7 @@ import { PropertyStatus } from 'src/schemas/property.schema';
 
 export class CreatePropertyDto {
   @IsString({ message: 'Property name is required' })
-  title: string;
+  propertyName: string;
 
   @IsEnum(PropertyStatus, {
     message: 'Status must be pending, active or ban',

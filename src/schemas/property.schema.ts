@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument } from 'mongoose';
+import mongoose, { HydratedDocument, Types } from 'mongoose';
 
 export enum PropertyStatus {
   PENDING = 'pending',
@@ -10,9 +10,13 @@ export enum PropertyStatus {
 @Schema({ timestamps: true })
 export class Property {
   @Prop({ required: true, trim: true })
-  title: string;
+  propertyName: string;
 
-  @Prop({ required: true, enum: PropertyStatus, default: PropertyStatus.PENDING })
+  @Prop({
+    required: true,
+    enum: PropertyStatus,
+    default: PropertyStatus.PENDING,
+  })
   status: PropertyStatus;
 
   @Prop({ required: true, type: String })
@@ -47,6 +51,9 @@ export class Property {
 
   @Prop({ type: String, default: '' })
   locationMapLink: string;
+
+  // @Prop({ type: Types.ObjectId, required: true })
+  // propertyOwner: Types.ObjectId;
 }
 
 export type PropertyDocument = HydratedDocument<Property>;

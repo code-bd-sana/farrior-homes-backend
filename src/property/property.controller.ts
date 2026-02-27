@@ -30,7 +30,7 @@ export class PropertyController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.propertyService.findOne(+id);
+    return this.propertyService.findOne(id);
   }
 
   @Patch(':id')
@@ -38,7 +38,7 @@ export class PropertyController {
     @Param('id') id: string,
     @Body() updatePropertyDto: UpdatePropertyDto,
   ) {
-    return this.propertyService.update(+id, updatePropertyDto);
+    return this.propertyService.update(id, updatePropertyDto);
   }
 
   @Delete(':id')

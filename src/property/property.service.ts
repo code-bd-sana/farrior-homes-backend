@@ -29,13 +29,13 @@ export class PropertyService {
 
   // Find single property using id
 
-  findOne(id: string) {
-    const property = this.propertyModel.findOne({ _id: id });
+  async findOne(id: string) {
+    const property = await this.propertyModel.findOne({ _id: id });
     return property;
   }
 
-  update(id: string, updatePropertyDto: UpdatePropertyDto) {
-    const updated = this.propertyModel.updateOne(
+  async update(id: string, updatePropertyDto: UpdatePropertyDto) {
+    const updated = await this.propertyModel.updateOne(
       { _id: id },
       {
         $set: updatePropertyDto,
@@ -44,8 +44,8 @@ export class PropertyService {
     return updated;
   }
 
-  remove(id: string) {
-    const deleted = this.propertyModel.deleteOne({ _id: id });
+  async remove(id: string) {
+    const deleted = await this.propertyModel.deleteOne({ _id: id });
     return deleted;
   }
 }

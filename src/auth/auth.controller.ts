@@ -1,28 +1,21 @@
 import {
   Req,
-  Query,
   UseGuards,
   Controller,
   Get,
   Post,
   Body,
   Patch,
-  Param,
-  Delete,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { RolesGuard } from './guards/roles.guard';
-import { Roles } from './decorators/roles.decorator';
-import { UserRole } from 'src/schemas/user.schema';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
-import { MongoIdDto, UserIdDto } from 'src/common/dto/mongoId.dto';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { UserIdDto } from 'src/common/dto/mongoId.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -54,47 +47,12 @@ export class AuthController {
     return req.user;
   }
 
-  // Get current user's profile
   @UseGuards(JwtAuthGuard)
-  @Get('me')
-  getMyProfile(@CurrentUser() user: UserIdDto) {
-    return this.authService.getUserProfile(user.userId);
-  }
-
-  // Update current user's profile
-  @UseGuards(JwtAuthGuard)
-  @Patch('me')
-  updateMyProfile(
+  @Patch('change-password')
+  changePassword(
     @CurrentUser() user: UserIdDto,
-    @Body() updateAuthDto: UpdateAuthDto,
+    @Body() changePasswordDto: ChangePasswordDto,
   ) {
-    return this.authService.updateMyProfile(user.userId, updateAuthDto);
-  }
-
-  // Admin-only endpoint to get all users with pagination
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @Get('users')
-  findAllUsers(@Query() query: PaginationDto) {
-    return this.authService.findAllUsers(query);
-  }
-
-  // Admin-only endpoint to delete a user by ID
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @Delete('users/:id')
-  removeUserByAdmin(@Param() param: MongoIdDto) {
-    return this.authService.removeUserByAdmin(param.id);
-  }
-
-  // Admin-only endpoint to suspend/unsuspend a user by ID
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @Patch('users/:id/suspend-toggle')
-  suspendUserByAdmin(@Param() param: MongoIdDto) {
-    return this.authService.suspendToggleByAdmin(param.id);
+    return this.authService.changePassword(user.userId, changePasswordDto);
   }
 }
-
-// JwtAuthGuard: allow any logged-in user
-// RolesGuard: Is this user allowed for this action?

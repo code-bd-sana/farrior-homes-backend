@@ -6,15 +6,14 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { User, UserDocument } from 'src/schemas/user.schema';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { JwtService } from '@nestjs/jwt';
-import { MongoIdDto, UserIdDto } from 'src/common/dto/mongoId.dto';
-import { PaginatedMetaDto, PaginationDto } from 'src/common/dto/pagination.dto';
+import { UserIdDto } from 'src/common/dto/mongoId.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -152,175 +151,43 @@ export class AuthService {
    *
    * This is for admin use to view all registered users in the system.
    */
-  async findAllUsers(query: PaginationDto) {
-    const page = query.page ?? 1;
-    const limit = query.limit ?? 10;
-    const search = query.search?.trim();
-
-    const filter = search
-      ? {
-          $or: [
-            { name: { $regex: search, $options: 'i' } },
-            { email: { $regex: search, $options: 'i' } },
-            { phone: { $regex: search, $options: 'i' } },
-          ],
-        }
-      : {};
-
-    const [users, total] = await Promise.all([
-      this.userModel
-        .find(filter)
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .lean(),
-      this.userModel.countDocuments(filter),
-    ]);
-
-    const totalPages = Math.ceil(total / limit) || 1;
-    const pagination: PaginatedMetaDto = {
-      page,
-      limit,
-      total,
-      totalPages,
-      count: users.length,
-      hasNextPage: page < totalPages,
-      hasPrevPage: page > 1,
-      ...(search ? { search } : {}),
-    };
-
-    return {
-      message: 'Users fetched successfully',
-      data: {
-        users: users.map((user) => this.sanitizeUser(user)),
-        pagination,
-      },
-    };
-  }
-
-  /**
-   * Fetch the profile details of the currently authenticated user by their id.
-   *
-   * @param userId - the id of the user whose profile is to be fetched
-   * @returns the profile details of the user with the given id, excluding the password, along with a success message. Throws an error if the user is not found or if the provided id is invalid.
-   *
-   * This allows authenticated users to view their own profile information.
-   */
-  async getUserProfile(userId: UserIdDto['userId']) {
-    this.ensureValidObjectId(userId);
-
-    const user = await this.userModel.findById(userId).lean();
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    return {
-      message: 'Profile fetched successfully',
-      data: this.sanitizeUser(user),
-    };
-  }
-
-  /**
-   * Update the profile details of the currently authenticated user by their id.
-   *
-   * @param userId - the id of the user whose profile is to be updated
-   * @param updateAuthDto - the data to update the user's profile with
-   * @returns the updated profile details of the user, excluding the password, along with a success message. Throws an error if the user is not found or if the provided id is invalid.
-   *
-   * This allows authenticated users to update their own profile information. Admins can also use this to update any user's profile.
-   */
-  async updateMyProfile(
+  async changePassword(
     userId: UserIdDto['userId'],
-    updateAuthDto: UpdateAuthDto,
+    changePasswordDto: ChangePasswordDto,
   ) {
-    this.ensureValidObjectId(userId);
+    const { currentPassword, newPassword, confirmNewPassword } =
+      changePasswordDto;
 
-    const updatedUser = await this.userModel
-      .findByIdAndUpdate(userId, updateAuthDto, {
-        new: true,
-        runValidators: true,
-      })
-      .lean();
+    if (newPassword !== confirmNewPassword) {
+      throw new BadRequestException(
+        'Confirm new password must match new password',
+      );
+    }
 
-    if (!updatedUser) {
+    const user = await this.userModel
+      .findById(userId)
+      .select('+password')
+      .exec();
+    if (!user || !user.password) {
       throw new NotFoundException('User not found');
     }
 
-    return {
-      message: 'Profile updated successfully',
-      data: this.sanitizeUser(updatedUser),
-    };
-  }
+    const isCurrentPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.password,
+    );
 
-  /**
-   * Delete a user by their id. This is an admin-only operation.
-   *
-   * @param userId - the id of the user to be deleted
-   * @returns a success message on successful deletion of the user. Throws an error if the user is not found or if the provided id is invalid.
-   *
-   * This allows admins to delete any user from the system. Regular users cannot delete their own accounts or other users' accounts.
-   */
-  async removeUserByAdmin(userId: UserIdDto['userId']) {
-    this.ensureValidObjectId(userId);
-
-    const deletedUser = await this.userModel.findByIdAndDelete(userId).lean();
-    if (!deletedUser) {
-      throw new NotFoundException('User not found');
+    if (!isCurrentPasswordValid) {
+      throw new UnauthorizedException('Current password is incorrect');
     }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
 
     return {
-      message: 'User deleted successfully',
-      data: this.sanitizeUser(deletedUser),
+      message: 'Password updated successfully',
+      data: null,
     };
-  }
-
-  /**
-   * Suspend/unsuspend a user by their id. This is an admin-only operation.
-   *
-   * @param id - the id of the user to be suspended or unsuspended by toggle their suspension status
-   * @returns - a success message on successful suspension/unsuspension of the user along with the updated user data. Throws an error if the user is not found or if the provided id is invalid.
-   *
-   * This allows admins to suspend or unsuspend any user in the system. Suspended users will not be able to log in until they are unsuspended. Regular users cannot suspend themselves or other users.
-   */
-  async suspendToggleByAdmin(id: MongoIdDto['id']) {
-    this.ensureValidObjectId(id);
-    const user = await this.userModel.findById(id).lean();
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    // toggle the isSuspended field of the user
-    const updatedUser = await this.userModel
-      .findByIdAndUpdate(
-        id,
-        { isSuspended: !user.isSuspended },
-        { new: true, runValidators: true },
-      )
-      .lean();
-
-    if (!updatedUser) {
-      throw new NotFoundException('User not found after update');
-    }
-
-    return {
-      message: `User ${updatedUser.isSuspended ? 'unsuspended' : 'suspended'} successfully`,
-      data: this.sanitizeUser(updatedUser),
-    };
-  }
-
-  // helper method to validate if a string is a valid MongoDB ObjectId
-  private ensureValidObjectId(id: string) {
-    if (!Types.ObjectId.isValid(id)) {
-      throw new BadRequestException('Invalid user id');
-    }
-  }
-
-  // helper method to remove password field from user objects before sending them in responses
-  private sanitizeUser<T extends { password?: string }>(
-    user: T,
-  ): Omit<T, 'password'> {
-    const sanitizedUser = { ...user };
-    delete sanitizedUser.password;
-    return sanitizedUser;
   }
 }

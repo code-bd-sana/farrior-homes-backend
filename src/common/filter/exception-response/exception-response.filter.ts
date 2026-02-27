@@ -82,10 +82,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     const payload = {
       success: false,
+      error: error,
       message,
       method: request?.method,
       endpoint: request?.originalUrl || request?.url || '',
       statusCode: status,
+
       timestamp: new Date().toISOString(),
       ...(errors && { errors }),
       ...(error && !errors && { error }),

@@ -1,12 +1,5 @@
-import {
-  IsString,
-  IsNumber,
-  IsEnum,
-  IsArray,
-  IsOptional,
-  IsUrl,
-  Min,
-} from 'class-validator';
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { HydratedDocument } from 'mongoose';
 
 export enum PropertyStatus {
   PENDING = 'pending',
@@ -14,51 +7,47 @@ export enum PropertyStatus {
   BAN = 'ban',
 }
 
-export class CreatePropertyDto {
-  @IsString({ message: 'Property name is required' })
+@Schema({ timestamps: true })
+export class Property {
+  @Prop({ required: true, trim: true })
   title: string;
 
-  @IsEnum(PropertyStatus, {
-    message: 'Status must be pending, active or ban',
-  })
+  @Prop({ required: true, enum: PropertyStatus, default: PropertyStatus.PENDING })
   status: PropertyStatus;
 
-  @IsString({ message: 'Overview is required' })
-  overview: string; // React Quill HTML
+  @Prop({ required: true, type: String })
+  overview: string;
 
-  @IsString({ message: 'Key features are required' })
-  keyFeatures: string; // React Quill HTML
+  @Prop({ required: true, type: String })
+  keyFeatures: string;
 
-  @IsNumber({}, { message: 'Bedrooms must be a number' })
-  @Min(0)
+  @Prop({ required: true, type: Number, min: 0 })
   bedrooms: number;
 
-  @IsNumber({}, { message: 'Bathrooms must be a number' })
-  @Min(0)
+  @Prop({ required: true, type: Number, min: 0 })
   bathrooms: number;
 
-  @IsNumber({}, { message: 'Square feet must be a number' })
-  @Min(0)
+  @Prop({ required: true, type: Number, min: 0 })
   squareFeet: number;
 
-  @IsNumber({}, { message: 'Lot size must be a number' })
-  @Min(0)
+  @Prop({ required: true, type: Number, min: 0 })
   lotSize: number;
 
-  @IsNumber({}, { message: 'Price must be a number' })
-  @Min(0)
+  @Prop({ required: true, type: Number, min: 0 })
   price: number;
 
-  @IsNumber({}, { message: 'Year built must be a number' })
+  @Prop({ required: true, type: Number })
   yearBuilt: number;
 
-  @IsString({ message: 'More details are required' })
-  moreDetails: string; // React Quill HTML
+  @Prop({ required: true, type: String })
+  moreDetails: string;
 
-  @IsArray({ message: 'Photos must be an array' })
-  @IsUrl({}, { each: true, message: 'Each photo must be a valid URL' })
+  @Prop({ type: [String], default: [] })
   photos: string[];
 
-  @IsUrl({}, { message: 'Location map link must be a valid URL' })
+  @Prop({ type: String, default: '' })
   locationMapLink: string;
 }
+
+export type PropertyDocument = HydratedDocument<Property>;
+export const PropertySchema = SchemaFactory.createForClass(Property);

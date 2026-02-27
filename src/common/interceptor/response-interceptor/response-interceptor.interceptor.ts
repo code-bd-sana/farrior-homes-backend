@@ -18,16 +18,32 @@ export class ResponseInterceptorInterceptor implements NestInterceptor {
     const request = ctx.getRequest();
 
     return next.handle().pipe(
-      map((data) => ({
-        success: true,
-        message: 'Request successful',
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        method: request.method,
-        endpoint: request.url,
-        statusCode: response.statusCode,
-        timestamp: new Date().toISOString(),
-        data: data,
-      })),
+      map((data) => {
+        const hasCustomMessage =
+          typeof data === 'object' &&
+          data !== null &&
+          'message' in data &&
+          typeof data.message === 'string';
+
+        const payloadData =
+          hasCustomMessage &&
+          typeof data === 'object' &&
+          data !== null &&
+          'data' in data
+            ? data.data
+            : data;
+
+        return {
+          success: true,
+          message: hasCustomMessage ? data.message : 'Request successful',
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          method: request.method,
+          endpoint: request.url,
+          statusCode: response.statusCode,
+          timestamp: new Date().toISOString(),
+          data: payloadData,
+        };
+      }),
     );
   }
 }

@@ -46,14 +46,14 @@ export class HttpExceptionFilter implements ExceptionFilter {
     if (Array.isArray(exception)) {
       status = HttpStatus.BAD_REQUEST;
       message = 'Validation failed';
-      errors = exception.flatMap((err: any) => {
+      errors = exception.map((err: any) => {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
         const field: string = err.property;
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         const constraints: string[] = err.constraints
           ? Object.values(err.constraints)
           : ['Invalid value'];
-        return constraints.map((msg) => ({ field, message: msg }));
+        return { field, message: constraints[0] };
       });
     } else if (exception instanceof HttpException) {
       const body = exception.getResponse();

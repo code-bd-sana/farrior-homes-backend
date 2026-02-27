@@ -59,3 +59,6 @@ export class Property extends Document {
   @Prop({ type: String, default: '' })
   locationMapLink: string;
 }
+
+
+//ay hai

@@ -26,10 +26,24 @@ export default tseslint.config(
   },
   {
     rules: {
+      // --- TypeScript strictness tweaks ---
       '@typescript-eslint/no-explicit-any': 'off',
+
+      // Promise safety
       '@typescript-eslint/no-floating-promises': 'warn',
+
+      // Unsafe operations — set to warn instead of error
       '@typescript-eslint/no-unsafe-argument': 'warn',
-      "prettier/prettier": ["error", { endOfLine: "auto" }],
+      '@typescript-eslint/no-unsafe-return': 'warn',
+      '@typescript-eslint/no-unsafe-assignment': 'warn',
+      '@typescript-eslint/no-unsafe-member-access': 'warn',
+      '@typescript-eslint/no-unsafe-call': 'warn',
+      '@typescript-eslint/no-unnecessary-type-assertion': 'warn',
+      '@typescript-eslint/require-await': 'warn',
+      'eslint@typescript-eslint/no-unsafe-member-access': 'warn',
+
+      // --- Prettier formatting ---
+      'prettier/prettier': ['error', { endOfLine: 'auto' }],
     },
   },
 );

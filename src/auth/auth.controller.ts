@@ -6,42 +6,41 @@ import {
   Post,
   Body,
   Patch,
-  Param,
-  Delete,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { RolesGuard } from './guards/roles.guard';
-import { Roles } from './decorators/roles.decorator';
-import { UserRole } from 'src/schemas/user.schema';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { UserIdDto } from 'src/common/dto/mongoId.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  // Register User
   @Post('register')
   create(@Body() createAuthDto: CreateAuthDto) {
     return this.authService.create(createAuthDto);
   }
 
+  // Login User
   @Post('login')
   login(@Body() loginAuthDto: LoginAuthDto) {
     return this.authService.login(loginAuthDto);
   }
 
+  // User Login with Google
   @UseGuards(GoogleAuthGuard)
   @Get('google')
   googleLogin() {
     return;
   }
 
+  // Google OAuth callback endpoint
   @UseGuards(GoogleAuthGuard)
   @Get('google/callback')
   googleCallback(@Req() req: Request & { user: unknown }) {
@@ -49,34 +48,11 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get('me')
-  getMyProfile(@CurrentUser() user: UserIdDto) {
-    return this.authService.getUserProfile(user.userId);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Patch('me')
-  updateMyProfile(
-    @CurrentUser('userId') userId: string,
-    @Body() updateAuthDto: UpdateAuthDto,
+  @Patch('change-password')
+  changePassword(
+    @CurrentUser() user: UserIdDto,
+    @Body() changePasswordDto: ChangePasswordDto,
   ) {
-    return this.authService.updateMyProfile(userId, updateAuthDto);
-  }
-
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @Get('users')
-  findAllUsers() {
-    return this.authService.findAllUsers();
-  }
-
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @Delete('users/:id')
-  removeUserByAdmin(@Param('id') id: string) {
-    return this.authService.removeUserByAdmin(id);
+    return this.authService.changePassword(user.userId, changePasswordDto);
   }
 }
-
-// JwtAuthGuard: allow any logged-in user
-// RolesGuard: Is this user allowed for this action?

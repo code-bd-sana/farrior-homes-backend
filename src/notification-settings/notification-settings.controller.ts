@@ -16,7 +16,7 @@ export class NotificationSettingsController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.notificationSettingsService.findOne(+id);
+    return this.notificationSettingsService.findOne(id);
   }
 
   @Patch(':id')

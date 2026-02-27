@@ -3,17 +3,26 @@ import { HydratedDocument } from 'mongoose';
 
 export type UserDocument = HydratedDocument<User>;
 
+export enum UserRole {
+  USER = 'USER',
+  ADMIN = 'ADMIN',
+}
+
 @Schema({ timestamps: true, versionKey: false })
 export class User {
-  @Prop({ trim: true })
-  // can upload image as file or provide image url
-  profileImage?: string;
-
   @Prop({ required: true, trim: true })
   name: string;
 
   @Prop({ required: true, unique: true, trim: true, lowercase: true })
   email: string;
+
+  // user role can be either USER or ADMIN, default is USER
+  @Prop({ enum: UserRole, default: UserRole.USER })
+  role?: UserRole;
+
+  @Prop({ trim: true })
+  // can upload image as file or provide image url
+  profileImage?: string;
 
   @Prop({ required: true, unique: true, trim: true })
   phone: string;

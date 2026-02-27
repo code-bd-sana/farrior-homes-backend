@@ -44,7 +44,8 @@ export class PropertyService {
     return updated;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} property`;
+  remove(id: string) {
+    const deleted = this.propertyModel.deleteOne({ _id: id });
+    return deleted;
   }
 }

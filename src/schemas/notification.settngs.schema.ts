@@ -3,11 +3,11 @@ import { NotificationType } from './notification.schema';
 
 @Schema({ timestamps: true })
 export class NotificationSettings {
-  @Prop({ required: true })
+  @Prop({ required: true, unique: true })
   name: NotificationType;
 
   @Prop({ required: true })
-  status: boolean;
+  isActive: boolean;
 }
 export const NotificationSettingSchema =
   SchemaFactory.createForClass(NotificationSettings);

@@ -2,20 +2,21 @@ import { Injectable } from '@nestjs/common';
 import { CreateNotificationSettingDto } from './dto/create-notification-setting.dto';
 import { UpdateNotificationSettingDto } from './dto/update-notification-setting.dto';
 import { InjectModel } from '@nestjs/mongoose';
-import { NotificationSetting } from './entities/notification-setting.entity';
 import { Model } from 'mongoose';
+import { NotificationSettings } from 'src/schemas/notification.settngs.schema';
 
 @Injectable()
 export class NotificationSettingsService {
   constructor(
-    @InjectModel(NotificationSetting.name)
-    private readonly NotificaitonSettingModel: Model<NotificationSetting>,
+    @InjectModel(NotificationSettings.name)
+    private readonly notificationSettingModel: Model<NotificationSettings>,
   ) {}
 
   async create(createNotificationSettingDto: CreateNotificationSettingDto) {
-    const created = await new this.NotificaitonSettingModel(
+    const newNotificationSetting = new this.notificationSettingModel(
       createNotificationSettingDto,
     );
+    const created = await newNotificationSetting.save();
     return created;
   }
 

@@ -7,6 +7,7 @@ import { NotificationModule } from './notification/notification.module';
 import { PropertyModule } from './property/property.module';
 import { UserModule } from './user/user.module';
 import { ServiceModule } from './service/service.module';
+import { PaymentModule } from './payment/payment.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { ServiceModule } from './service/service.module';
     NotificationModule,
     NotificationSettingsModule,
     ServiceModule,
+    PaymentModule,
   ],
 
   controllers: [],

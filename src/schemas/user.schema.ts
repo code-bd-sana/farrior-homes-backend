@@ -56,6 +56,9 @@ export class User {
 
   @Prop({ default: false })
   isSuspended?: boolean;
+
+  @Prop({ trim: true, default: false })
+  isSubscribed?: boolean;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

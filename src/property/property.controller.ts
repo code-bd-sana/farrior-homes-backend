@@ -10,7 +10,6 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
-import { Auth } from 'src/auth/entities/auth.entity';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from 'src/auth/guards/optional-jwt-auth.guard';
 import type { AuthUser } from 'src/common/interface/auth-user.interface';
@@ -23,16 +22,19 @@ export class PropertyController {
   constructor(private readonly propertyService: PropertyService) {}
 
   @UseGuards(JwtAuthGuard)
-  // TODO: Only Subscriber can post property -- Add a Subscripotion Guard or something like that.
+  // TODO: Only Subscriber can post property -- Add a Subscription Guard or something like that.
   @Post()
-  create(@Body() createPropertyDto: CreatePropertyDto, @CurrentUser() user:Auth) {
+  create(
+    @Body() createPropertyDto: CreatePropertyDto,
+    @CurrentUser() user: AuthUser,
+  ) {
     return this.propertyService.create(createPropertyDto, user);
   }
 
   @UseGuards(OptionalJwtAuthGuard)
   @Get()
-  findAll(@CurrentUser() user: AuthUser, @Query() query: Record<string, any>,  ) {
-    console.log(user)
+  findAll(@CurrentUser() user: AuthUser, @Query() query: Record<string, any>) {
+    console.log(user);
     return this.propertyService.findAll(user, query);
   }
 
@@ -40,7 +42,6 @@ export class PropertyController {
   findOne(@Param('id') id: string) {
     return this.propertyService.findOne(id);
   }
-
 
   // Property Update
   // Private
@@ -50,13 +51,10 @@ export class PropertyController {
   update(
     @Param('id') id: string,
     @Body() updatePropertyDto: UpdatePropertyDto,
-    @CurrentUser() user:AuthUser
-
-
+    @CurrentUser() user: AuthUser,
   ) {
     return this.propertyService.update(id, updatePropertyDto, user);
   }
-
 
   // Property Delete
   // Private
@@ -64,7 +62,7 @@ export class PropertyController {
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  remove(@Param('id') id: string, @CurrentUser() user:AuthUser) {
+  remove(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.propertyService.remove(id, user);
   }
 }

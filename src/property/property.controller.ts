@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
@@ -30,9 +31,9 @@ export class PropertyController {
 
   @UseGuards(OptionalJwtAuthGuard)
   @Get()
-  findAll(@CurrentUser() user: AuthUser ) {
+  findAll(@CurrentUser() user: AuthUser, @Query() query: Record<string, any>,  ) {
     console.log(user)
-    return this.propertyService.findAll();
+    return this.propertyService.findAll(user, query);
   }
 
   @Get(':id')
@@ -56,8 +57,14 @@ export class PropertyController {
     return this.propertyService.update(id, updatePropertyDto, user);
   }
 
+
+  // Property Delete
+  // Private
+  // Only property owner can delete their own property
+
+  @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.propertyService.remove(id);
+  remove(@Param('id') id: string, @CurrentUser() user:AuthUser) {
+    return this.propertyService.remove(id, user);
   }
 }

@@ -1,13 +1,12 @@
-import { Type } from '@nestjs/common';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
-import { UserIdDto } from 'src/common/dto/mongoId.dto';
 
 export enum PropertyStatus {
   PENDING = 'pending',
   ACTIVE = 'active',
   BAN = 'ban',
 }
+
 
 @Schema({ timestamps: true })
 export class Property {
@@ -30,7 +29,7 @@ export class Property {
   overview: string;
 
   // Key features: Receive Quil Js
-  @Prop({ required: true, type: String })
+  @Prop({ required:  true, type: String })
   keyFeatures: string;
 
   // Bedrooms
@@ -83,7 +82,7 @@ export class Property {
    images: string[]
 
    @Prop({type:Types.ObjectId,  required: true})
-   propertyOwner: UserIdDto
+   propertyOwner: Types.ObjectId
 
   // @Prop({ type: Types.ObjectId, required: true })
   // propertyOwner: Types.ObjectId;

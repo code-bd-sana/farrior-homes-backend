@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { AuthUser } from 'src/common/interface/auth-user.interface';
@@ -43,9 +43,20 @@ export class PropertyService {
     return property;
   }
 
-  async update(id: string, updatePropertyDto: UpdatePropertyDto, user:AuthUser) {
-    // TODO: If property owner dones not exist user.id then throw an error
 
+  // * Update property
+  async update(id: string, updatePropertyDto: UpdatePropertyDto, user:AuthUser) {
+
+    // Check property ownership
+  const isOwner = await this.propertyModel.findOne({propertyOwner:user.userId});
+
+  //  If isOwner false then throuw a forbidden error
+  if(!isOwner){
+    throw new ForbiddenException('Forbidden')
+  }
+
+
+  // updated
     const updated = await this.propertyModel.updateOne(
       { _id: id },
       {

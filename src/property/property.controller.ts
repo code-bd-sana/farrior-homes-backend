@@ -9,13 +9,13 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
+import { Auth } from 'src/auth/entities/auth.entity';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from 'src/auth/guards/optional-jwt-auth.guard';
 import type { AuthUser } from 'src/common/interface/auth-user.interface';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { PropertyService } from './property.service';
-import { Auth } from 'src/auth/entities/auth.entity';
 
 @Controller('property')
 export class PropertyController {
@@ -40,6 +40,11 @@ export class PropertyController {
     return this.propertyService.findOne(id);
   }
 
+
+  // Property Update
+  // Private
+  // Only property owner can update their own property
+  @UseGuards(JwtAuthGuard)
   @Patch(':id')
   update(
     @Param('id') id: string,

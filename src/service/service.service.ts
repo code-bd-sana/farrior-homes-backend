@@ -8,6 +8,7 @@ import { UpdateServiceDto } from './dto/update-service.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Service, ServiceDocument } from 'src/schemas/service.schema';
 import { Model, Types } from 'mongoose';
+import { PaginatedMetaDto, PaginationDto } from 'src/common/dto/pagination.dto';
 
 @Injectable()
 export class ServiceService {
@@ -40,12 +41,54 @@ export class ServiceService {
     };
   }
 
-  async findAll() {
-    const services = await this.serviceModel.find().sort({ createdAt: -1 });
+  /**
+   * Fetch all services from the database
+   *
+   * @returns An array of service documents, each containing the details of a service along with its unique identifier (_id) and timestamps (createdAt, updatedAt). The services are sorted in descending order based on their creation date.
+   * @throws InternalServerErrorException if there is an error while fetching the services from the database.
+   */
+  async findAll(query: PaginationDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+    const search = query.search?.trim();
+
+    const filter = search
+      ? {
+          $or: [
+            { title: { $regex: search, $options: 'i' } },
+            { subTitle: { $regex: search, $options: 'i' } },
+            { 'description.text': { $regex: search, $options: 'i' } },
+          ],
+        }
+      : {};
+
+    const [services, total] = await Promise.all([
+      this.serviceModel
+        .find(filter)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
+      this.serviceModel.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.ceil(total / limit) || 1;
+    const pagination: PaginatedMetaDto = {
+      page,
+      limit,
+      total,
+      totalPages,
+      count: services.length,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
+      ...(search ? { search } : {}),
+    };
 
     return {
       message: 'Services fetched successfully',
-      data: services,
+      data: {
+        services,
+        pagination,
+      },
     };
   }
 

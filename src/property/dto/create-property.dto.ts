@@ -1,11 +1,12 @@
 import {
-  IsString,
-  IsNumber,
-  IsEnum,
   IsArray,
+  IsBoolean,
+  IsEnum,
+  IsNumber,
   IsOptional,
+  IsString,
   IsUrl,
-  Min,
+  Min
 } from 'class-validator';
 import { PropertyStatus } from 'src/schemas/property.schema';
 
@@ -50,10 +51,22 @@ export class CreatePropertyDto {
   @IsString({ message: 'More details are required' })
   moreDetails: string; // React Quill HTML
 
-  @IsArray({ message: 'Photos must be an array' })
-  @IsUrl({}, { each: true, message: 'Each photo must be a valid URL' })
-  photos: string[];
 
   @IsUrl({}, { message: 'Location map link must be a valid URL' })
   locationMapLink: string;
+
+  @IsOptional()
+  @IsBoolean({message:"IsPosted must be boolan"})
+  IsPosted: boolean
+
+  @IsOptional()
+  @IsString({message:'Posting date must be string'})
+  sellPostingDate:string
+
+  @IsOptional()
+  @IsString({message:'Posting Time must be string'})
+  sellPostingTime:string
+
+  @IsArray({message:"Images must be a array of string"})
+  images:[]
 }

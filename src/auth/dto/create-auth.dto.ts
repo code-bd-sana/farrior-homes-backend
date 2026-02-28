@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsEmail,
   IsNotEmpty,
   IsOptional,
@@ -58,4 +59,8 @@ export class CreateAuthDto {
   @ValidateIf((dto: CreateAuthDto) => Boolean(dto.confirmPassword))
   @Validate(MatchPasswordConstraint)
   confirmPassword: string;
+
+  @IsOptional()
+  @IsBoolean({ message: 'Is subscribed must be a boolean' })
+  isSubscribed?: boolean;
 }

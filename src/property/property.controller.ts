@@ -1,20 +1,20 @@
 import {
-  Controller,
-  Get,
-  Post,
   Body,
-  Patch,
-  Param,
+  Controller,
   Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
   UseGuards,
 } from '@nestjs/common';
-import { PropertyService } from './property.service';
+import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from 'src/auth/guards/optional-jwt-auth.guard';
+import type { AuthUser } from 'src/common/interface/auth-user.interface';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
-import { InjectModel } from '@nestjs/mongoose';
-import { Property } from './entities/property.entity';
-import { Model } from 'mongoose';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { PropertyService } from './property.service';
 
 @Controller('property')
 export class PropertyController {
@@ -27,8 +27,10 @@ export class PropertyController {
     return this.propertyService.create(createPropertyDto);
   }
 
+  @UseGuards(OptionalJwtAuthGuard)
   @Get()
-  findAll() {
+  findAll(@CurrentUser() user: AuthUser ) {
+    console.log(user)
     return this.propertyService.findAll();
   }
 

@@ -24,6 +24,3 @@ export class NotificationSettings {
 }
 export const NotificationSettingSchema =
   SchemaFactory.createForClass(NotificationSettings);
-
-
-  ///tdksajf

@@ -8,6 +8,7 @@ import { PropertyModule } from './property/property.module';
 import { UserModule } from './user/user.module';
 import { ServiceModule } from './service/service.module';
 import { PaymentModule } from './payment/payment.module';
+import { MaintenanceModule } from './maintenance/maintenance.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { PaymentModule } from './payment/payment.module';
     NotificationSettingsModule,
     ServiceModule,
     PaymentModule,
+    MaintenanceModule,
   ],
 
   controllers: [],

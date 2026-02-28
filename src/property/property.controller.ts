@@ -10,10 +10,13 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
-import { Auth } from 'src/auth/entities/auth.entity';
+import { Roles } from 'src/auth/decorators/roles.decorator';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from 'src/auth/guards/optional-jwt-auth.guard';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
+import { SubscribedUserGuard } from 'src/auth/guards/subscribed-user.guard';
 import type { AuthUser } from 'src/common/interface/auth-user.interface';
+import { UserRole } from 'src/schemas/user.schema';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { PropertyService } from './property.service';
@@ -22,17 +25,20 @@ import { PropertyService } from './property.service';
 export class PropertyController {
   constructor(private readonly propertyService: PropertyService) {}
 
-  @UseGuards(JwtAuthGuard)
-  // TODO: Only Subscriber can post property -- Add a Subscripotion Guard or something like that.
+
+
+ 
+ @UseGuards(JwtAuthGuard, RolesGuard, SubscribedUserGuard)
+ @Roles(UserRole.USER)
   @Post()
-  create(@Body() createPropertyDto: CreatePropertyDto, @CurrentUser() user:Auth) {
+  create(@Body() createPropertyDto: CreatePropertyDto, @CurrentUser() user:AuthUser) {
     return this.propertyService.create(createPropertyDto, user);
   }
 
   @UseGuards(OptionalJwtAuthGuard)
   @Get()
-  findAll(@CurrentUser() user: AuthUser, @Query() query: Record<string, any>,  ) {
-    console.log(user)
+  findAll(@CurrentUser() user: AuthUser, @Query() query: Record<string, any>) {
+    console.log(user);
     return this.propertyService.findAll(user, query);
   }
 
@@ -41,22 +47,19 @@ export class PropertyController {
     return this.propertyService.findOne(id);
   }
 
-
   // Property Update
   // Private
   // Only property owner can update their own property
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, SubscribedUserGuard)
+   @Roles(UserRole.USER)
   @Patch(':id')
   update(
     @Param('id') id: string,
     @Body() updatePropertyDto: UpdatePropertyDto,
-    @CurrentUser() user:AuthUser
-
-
+    @CurrentUser() user: AuthUser,
   ) {
     return this.propertyService.update(id, updatePropertyDto, user);
   }
-
 
   // Property Delete
   // Private
@@ -64,7 +67,7 @@ export class PropertyController {
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  remove(@Param('id') id: string, @CurrentUser() user:AuthUser) {
+  remove(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.propertyService.remove(id, user);
   }
 }

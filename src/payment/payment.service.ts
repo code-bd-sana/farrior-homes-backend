@@ -3,8 +3,6 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { CreatePaymentDto } from './dto/create-payment.dto';
-import { UpdatePaymentDto } from './dto/update-payment.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import {
   Payment,
@@ -12,21 +10,21 @@ import {
   PaymentStatus,
 } from 'src/schemas/payment.schema';
 import { Model, Types } from 'mongoose';
-import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 import { User, UserDocument } from '../schemas/user.schema';
+import { config } from 'src/config/app.config';
+import { AuthUser } from 'src/common/interface/auth-user.interface';
 
 @Injectable()
 export class PaymentService {
   private stripe: Stripe;
   constructor(
-    private readonly configService: ConfigService,
     @InjectModel(Payment.name)
     private readonly paymentModel: Model<PaymentDocument>,
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
   ) {
-    const secretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
+    const secretKey = config.STRIPE_SECRET_KEY;
     if (!secretKey) throw new Error('STRIPE_SECRET_KEY not set');
 
     this.stripe = new Stripe(secretKey, {
@@ -59,7 +57,7 @@ export class PaymentService {
       throw new BadRequestException('Suspended users cannot create payments');
     }
 
-    const stripePriceId = this.configService.get<string>('STRIPE_PRICE_ID');
+    const stripePriceId = config.STRIPE_PRICE_ID;
     if (!stripePriceId) {
       throw new BadRequestException('STRIPE_PRICE_ID not set');
     }
@@ -73,9 +71,7 @@ export class PaymentService {
       transactionId: `txn_${Date.now()}_${Math.random().toString(36).slice(2)}`,
     });
 
-    const frontendBaseUrl =
-      this.configService.get<string>('FRONTEND_BASE_URL') ||
-      'https://farrior-homes.vercel.app';
+    const frontendBaseUrl = config.FRONTEND_BASE_URL;
 
     const successUrl =
       options?.successUrl ||
@@ -114,9 +110,7 @@ export class PaymentService {
   }
 
   async handleStripeWebhook(rawBody: Buffer, signature: string): Promise<void> {
-    const webhookSecret = this.configService.get<string>(
-      'STRIPE_WEBHOOK_SECRET',
-    );
+    const webhookSecret = config.STRIPE_WEBHOOK_SECRET;
     if (!webhookSecret) throw new Error('STRIPE_WEBHOOK_SECRET not set');
 
     let event: Stripe.Event;
@@ -189,10 +183,10 @@ export class PaymentService {
     }
   }
 
-  async create(createPaymentDto: CreatePaymentDto) {
-    const data = await this.createCheckoutSession(createPaymentDto.userId, {
-      successUrl: createPaymentDto.successUrl,
-      cancelUrl: createPaymentDto.cancelUrl,
+  async create(user: AuthUser) {
+    const data = await this.createCheckoutSession(user.userId, {
+      successUrl: `${config.FRONTEND_BASE_URL}/payment/success`,
+      cancelUrl: `${config.FRONTEND_BASE_URL}/payment/cancel`,
     });
 
     return {
@@ -226,51 +220,6 @@ export class PaymentService {
     return {
       message: 'Payment fetched successfully',
       data: payment,
-    };
-  }
-
-  async update(id: string, updatePaymentDto: UpdatePaymentDto) {
-    this.ensureValidObjectId(id);
-
-    const payload: Record<string, unknown> = { ...updatePaymentDto };
-
-    // if (updatePaymentDto.user) {
-    //   this.ensureValidObjectId(updatePaymentDto.user);
-    //   payload.user = new Types.ObjectId(updatePaymentDto.user);
-    // }
-
-    // if (updatePaymentDto.currency) {
-    //   payload.currency = updatePaymentDto.currency.toLowerCase();
-    // }
-
-    const updatedPayment = await this.paymentModel
-      .findByIdAndUpdate(id, payload, {
-        new: true,
-        runValidators: true,
-      })
-      .populate('user', 'name email role');
-
-    if (!updatedPayment) {
-      throw new NotFoundException('Payment not found');
-    }
-
-    return {
-      message: 'Payment updated successfully',
-      data: updatedPayment,
-    };
-  }
-
-  async remove(id: string) {
-    this.ensureValidObjectId(id);
-
-    const deletedPayment = await this.paymentModel.findByIdAndDelete(id);
-    if (!deletedPayment) {
-      throw new NotFoundException('Payment not found');
-    }
-
-    return {
-      message: 'Payment deleted successfully',
-      data: deletedPayment,
     };
   }
 

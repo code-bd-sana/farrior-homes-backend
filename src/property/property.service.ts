@@ -3,7 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
-import { Property } from './entities/property.entity';
+import { Property } from 'src/schemas/property.schema';
 
 @Injectable()
 export class PropertyService {

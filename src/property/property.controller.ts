@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  UseGuards,
 } from '@nestjs/common';
 import { PropertyService } from './property.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
@@ -13,11 +14,14 @@ import { UpdatePropertyDto } from './dto/update-property.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Property } from './entities/property.entity';
 import { Model } from 'mongoose';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 
 @Controller('property')
 export class PropertyController {
   constructor(private readonly propertyService: PropertyService) {}
 
+  @UseGuards(JwtAuthGuard)
+  // TODO: Only Subscriber can post property -- Add a Subscripotion Guard or something like that.
   @Post()
   create(@Body() createPropertyDto: CreatePropertyDto) {
     return this.propertyService.create(createPropertyDto);

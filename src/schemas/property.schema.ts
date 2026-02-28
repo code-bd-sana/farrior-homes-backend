@@ -65,7 +65,7 @@ export class Property {
   locationMapLink: string;
 
   // Is Posted - By default false
-  @Prop({ type: Boolean, default: '' })
+  @Prop({ type: Boolean, default: false })
   isPosted:boolean
 
   // !Schdhedule 

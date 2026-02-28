@@ -51,13 +51,11 @@ export class CreatePropertyDto {
   @IsString({ message: 'More details are required' })
   moreDetails: string; // React Quill HTML
 
-  @IsArray({ message: 'Photos must be an array' })
-  @IsUrl({}, { each: true, message: 'Each photo must be a valid URL' })
-  photos: string[];
 
   @IsUrl({}, { message: 'Location map link must be a valid URL' })
   locationMapLink: string;
 
+  @IsOptional()
   @IsBoolean({message:"IsPosted must be boolan"})
   IsPosted: boolean
 

@@ -10,9 +10,13 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
+import { Roles } from 'src/auth/decorators/roles.decorator';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from 'src/auth/guards/optional-jwt-auth.guard';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
+import { SubscribedUserGuard } from 'src/auth/guards/subscribed-user.guard';
 import type { AuthUser } from 'src/common/interface/auth-user.interface';
+import { UserRole } from 'src/schemas/user.schema';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { PropertyService } from './property.service';
@@ -21,13 +25,13 @@ import { PropertyService } from './property.service';
 export class PropertyController {
   constructor(private readonly propertyService: PropertyService) {}
 
-  @UseGuards(JwtAuthGuard)
-  // TODO: Only Subscriber can post property -- Add a Subscription Guard or something like that.
+
+
+ 
+ @UseGuards(JwtAuthGuard, RolesGuard, SubscribedUserGuard)
+ @Roles(UserRole.USER)
   @Post()
-  create(
-    @Body() createPropertyDto: CreatePropertyDto,
-    @CurrentUser() user: AuthUser,
-  ) {
+  create(@Body() createPropertyDto: CreatePropertyDto, @CurrentUser() user:AuthUser) {
     return this.propertyService.create(createPropertyDto, user);
   }
 
@@ -46,7 +50,8 @@ export class PropertyController {
   // Property Update
   // Private
   // Only property owner can update their own property
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, SubscribedUserGuard)
+   @Roles(UserRole.USER)
   @Patch(':id')
   update(
     @Param('id') id: string,

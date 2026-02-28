@@ -1,11 +1,11 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, QueryFilter } from 'mongoose';
+import { Model } from 'mongoose';
 import { AuthUser } from 'src/common/interface/auth-user.interface';
 import { Property } from 'src/schemas/property.schema';
-import { UserRole } from 'src/schemas/user.schema';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
+import { UserRole } from 'src/schemas/user.schema';
 
 
 
@@ -30,56 +30,105 @@ export class PropertyService {
   }
 
   // Find All Property
-  findAll(userOrQuery, queryOrUser) {
-    // The controller may pass args in either order, so normalize them first.
-    const isLikelyUser = (value: any): value is AuthUser =>
-      Boolean(value && typeof value === 'object' && ('role' in value || 'userId' in value));
+// Find All Property
+findAll(user, query) {
 
-    const user = isLikelyUser(userOrQuery) ? userOrQuery : queryOrUser;
-    const query = isLikelyUser(userOrQuery) ? queryOrUser : userOrQuery;
+  const filters: any = {};
 
-    // Build Mongo filters only from valid query values.
-    const filters: QueryFilter<Property> = {};
-    const parseNum = (value: unknown): number | null => {
-      if (value === undefined || value === null || value === '') return null;
-      const num = Number(value);
-      return Number.isFinite(num) ? num : null;
-    };
-    const escapeRegex = (value: string) =>
-      value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // convert string to number safely
+  const toNumber = (value: any): number | null => {
+    if (value === undefined || value === null || value === '') return null;
+    const num = Number(value);
+    return isNaN(num) ? null : num;
+  };
 
-    const minPrice = parseNum(query?.minPrice);
-    const maxPrice = parseNum(query?.maxPrice);
-    if (minPrice !== null || maxPrice !== null) {
-      filters.price = {};
-      if (minPrice !== null) filters.price.$gte = minPrice;
-      if (maxPrice !== null) filters.price.$lte = maxPrice;
+  // convert single or comma string to number array
+  const toNumberArray = (value: any): number[] => {
+    if (!value) return [];
+
+    if (Array.isArray(value)) {
+      return value.map(Number).filter(n => !isNaN(n));
     }
 
-    const squareFeet = parseNum(query?.squareFeet);
-    if (squareFeet !== null) filters.squareFeet = squareFeet;
-
-    const bedrooms = parseNum(query?.bedrooms);
-    if (bedrooms !== null) filters.bedrooms = bedrooms;
-
-    const bathrooms = parseNum(query?.bathrooms);
-    if (bathrooms !== null) filters.bathrooms = bathrooms;
-
-    const locationToken =
-      query?.locationId ?? query?.location ?? query?.placeId ?? query?.locationIdentifier;
-    if (locationToken) {
-      filters.locationMapLink = {
-        $regex: escapeRegex(String(locationToken)),
-        $options: 'i',
-      };
+    if (typeof value === 'string') {
+      return value
+        .split(',')
+        .map(v => Number(v.trim()))
+        .filter(n => !isNaN(n));
     }
 
-    if (!user?.role || user.role !== UserRole.ADMIN) {
-      filters.isPosted = true;
+    return [];
+  };
+
+  // price filter
+  const minPrice = toNumber(query?.minPrice);
+  const maxPrice = toNumber(query?.maxPrice);
+
+  if (minPrice !== null || maxPrice !== null) {
+    filters.price = {};
+
+    if (minPrice !== null) {
+      filters.price.$gte = minPrice;
     }
 
-    return this.propertyModel.find(filters);
+    if (maxPrice !== null) {
+      filters.price.$lte = maxPrice;
+    }
   }
+
+  // square feet filter (single or multiple)
+  const squareFeetArray = toNumberArray(query?.squareFeet);
+
+  console.log(squareFeetArray, 'square feet');
+
+  if (squareFeetArray.length === 1) {
+    filters.squareFeet = squareFeetArray[0];
+  }
+
+  if (squareFeetArray.length > 1) {
+    filters.squareFeet = { $in: squareFeetArray };
+  }
+
+  // bedrooms filter
+  const bedroomArray = toNumberArray(query?.bedrooms);
+
+  if (bedroomArray.length === 1) {
+    filters.bedrooms = bedroomArray[0];
+  }
+
+  if (bedroomArray.length > 1) {
+    filters.bedrooms = { $in: bedroomArray };
+  }
+
+  // bathrooms filter
+  const bathroomArray = toNumberArray(query?.bathrooms);
+
+  if (bathroomArray.length === 1) {
+    filters.bathrooms = bathroomArray[0];
+  }
+
+  if (bathroomArray.length > 1) {
+    filters.bathrooms = { $in: bathroomArray };
+  }
+
+  // property type filter (multi string)
+  if (query?.type) {
+    const types = Array.isArray(query.type)
+      ? query.type
+      : query.type.split(',');
+
+    filters.propertyType = { $in: types };
+  }
+
+  // only show posted for non admin
+  if (!user?.role || user.role !== UserRole.ADMIN) {
+    filters.isPosted = true;
+  }
+
+  console.log(filters, 'final filters');
+
+  return this.propertyModel.find(filters).lean();
+}
 
   // *Find single property using id
 

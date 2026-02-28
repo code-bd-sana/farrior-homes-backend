@@ -64,8 +64,11 @@ export class CreatePropertyDto {
   @IsOptional()
   @IsString({message:'Posting date must be string'})
   sellPostingDate:string
-  
+
   @IsOptional()
   @IsString({message:'Posting Time must be string'})
   sellPostingTime:string
+
+  @IsArray({message:"Images must be a array of string"})
+  images:[]
 }

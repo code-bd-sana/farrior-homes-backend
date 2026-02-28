@@ -61,6 +61,9 @@ export class Property {
    @Prop({type:String, required:false})
    sellPostingTime: string
 
+   @Prop({type:Array, required:true})
+   images: []
+
   // @Prop({ type: Types.ObjectId, required: true })
   // propertyOwner: Types.ObjectId;
 }

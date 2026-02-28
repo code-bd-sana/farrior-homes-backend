@@ -1,14 +1,14 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import {  Model, QueryFilter } from 'mongoose';
+import { Model, QueryFilter } from 'mongoose';
 import { AuthUser } from 'src/common/interface/auth-user.interface';
+import { Property } from 'src/schemas/property.schema';
 import { UserRole } from 'src/schemas/user.schema';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
-import { Property } from 'src/schemas/property.schema';
 
 
-// doc
+
 @Injectable()
 export class PropertyService {
   constructor(
@@ -113,12 +113,17 @@ export class PropertyService {
     return updated;
   }
 
+
+/// joy bangla testing
+
   // *delete property
   async remove(id: string, user) {
     const isOwner = await this.propertyModel.exists({
       _id: id,
       propertyOwner: user.userId,
     });
+
+  
     if (!isOwner) {
       throw new ForbiddenException('Forbidden');
     }

@@ -114,7 +114,8 @@ export class PropertyService {
   }
 
 
-/// joy bangla testing
+/// joy bangla testing 
+// commit an dpush
 
   // *delete property
   async remove(id: string, user) {

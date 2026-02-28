@@ -6,6 +6,7 @@ import { NotificationSettingsModule } from './notification-settings/notification
 import { NotificationModule } from './notification/notification.module';
 import { PropertyModule } from './property/property.module';
 import { UserModule } from './user/user.module';
+import { ServiceModule } from './service/service.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { UserModule } from './user/user.module';
     UserModule,
     NotificationModule,
     NotificationSettingsModule,
+    ServiceModule,
   ],
 
   controllers: [],

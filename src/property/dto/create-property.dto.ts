@@ -2,12 +2,14 @@ import {
   IsArray,
   IsBoolean,
   IsEnum,
+  IsMongoId,
   IsNumber,
   IsOptional,
   IsString,
   IsUrl,
   Min
 } from 'class-validator';
+import { UserIdDto } from 'src/common/dto/mongoId.dto';
 import { PropertyStatus } from 'src/schemas/property.schema';
 
 export class CreatePropertyDto {
@@ -70,3 +72,4 @@ export class CreatePropertyDto {
   @IsArray({message:"Images must be a array of string"})
   images:[]
 }
+

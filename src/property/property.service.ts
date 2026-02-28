@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { AuthUser } from 'src/common/interface/auth-user.interface';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { Property } from './entities/property.entity';
-import { AuthUser } from 'src/common/interface/auth-user.interface';
 
 @Injectable()
 export class PropertyService {

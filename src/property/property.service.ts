@@ -4,6 +4,7 @@ import { Model } from 'mongoose';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { Property } from './entities/property.entity';
+import { AuthUser } from 'src/common/interface/auth-user.interface';
 
 @Injectable()
 export class PropertyService {
@@ -13,8 +14,16 @@ export class PropertyService {
   ) {}
 
   // Create a new property
-  async create(createPropertyDto: CreatePropertyDto): Promise<Property> {
-    const createdProperty = new this.propertyModel(createPropertyDto);
+  async create(createPropertyDto: CreatePropertyDto, user): Promise<Property> {
+
+    // set property Owner 
+    const payload = {
+      ...createPropertyDto,
+      propertyOwner: user.userId,
+    };
+
+    // create property
+    const createdProperty = new this.propertyModel(payload);
     return createdProperty.save();
   }
 
@@ -34,7 +43,9 @@ export class PropertyService {
     return property;
   }
 
-  async update(id: string, updatePropertyDto: UpdatePropertyDto) {
+  async update(id: string, updatePropertyDto: UpdatePropertyDto, user:AuthUser) {
+    // TODO: If property owner dones not exist user.id then throw an error
+
     const updated = await this.propertyModel.updateOne(
       { _id: id },
       {

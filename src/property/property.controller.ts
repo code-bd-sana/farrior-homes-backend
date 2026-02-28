@@ -15,6 +15,7 @@ import type { AuthUser } from 'src/common/interface/auth-user.interface';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { PropertyService } from './property.service';
+import { Auth } from 'src/auth/entities/auth.entity';
 
 @Controller('property')
 export class PropertyController {
@@ -23,8 +24,8 @@ export class PropertyController {
   @UseGuards(JwtAuthGuard)
   // TODO: Only Subscriber can post property -- Add a Subscripotion Guard or something like that.
   @Post()
-  create(@Body() createPropertyDto: CreatePropertyDto) {
-    return this.propertyService.create(createPropertyDto);
+  create(@Body() createPropertyDto: CreatePropertyDto, @CurrentUser() user:Auth) {
+    return this.propertyService.create(createPropertyDto, user);
   }
 
   @UseGuards(OptionalJwtAuthGuard)
@@ -43,8 +44,11 @@ export class PropertyController {
   update(
     @Param('id') id: string,
     @Body() updatePropertyDto: UpdatePropertyDto,
+    @CurrentUser() user:AuthUser
+
+
   ) {
-    return this.propertyService.update(id, updatePropertyDto);
+    return this.propertyService.update(id, updatePropertyDto, user);
   }
 
   @Delete(':id')

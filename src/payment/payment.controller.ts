@@ -9,12 +9,17 @@ import {
   Headers,
   Req,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import type { RawBodyRequest } from '@nestjs/common';
 import { PaymentService } from './payment.service';
-import { CreatePaymentDto } from './dto/create-payment.dto';
-import { UpdatePaymentDto } from './dto/update-payment.dto';
 import type { Request, Response } from 'express';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
+import { Roles } from 'src/auth/decorators/roles.decorator';
+import { UserRole } from 'src/schemas/user.schema';
+import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
+import type { AuthUser } from 'src/common/interface/auth-user.interface';
 
 @Controller('payment')
 export class PaymentController {
@@ -25,9 +30,13 @@ export class PaymentController {
     return this.paymentService.createCheckoutSession(userId);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER)
   @Post()
-  create(@Body() createPaymentDto: CreatePaymentDto) {
-    return this.paymentService.create(createPaymentDto);
+  create(
+      @CurrentUser() user: AuthUser,
+  ) {
+    return this.paymentService.create(user);
   }
 
   @Get()
@@ -38,15 +47,5 @@ export class PaymentController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.paymentService.findOne(id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePaymentDto: UpdatePaymentDto) {
-    return this.paymentService.update(id, updatePaymentDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.paymentService.remove(id);
   }
 }

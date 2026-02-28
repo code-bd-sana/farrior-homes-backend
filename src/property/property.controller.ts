@@ -10,7 +10,6 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
-import { Auth } from 'src/auth/entities/auth.entity';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from 'src/auth/guards/optional-jwt-auth.guard';
 import type { AuthUser } from 'src/common/interface/auth-user.interface';
@@ -25,7 +24,7 @@ export class PropertyController {
   @UseGuards(JwtAuthGuard)
   // TODO: Only Subscriber can post property -- Add a Subscripotion Guard or something like that.
   @Post()
-  create(@Body() createPropertyDto: CreatePropertyDto, @CurrentUser() user:Auth) {
+  create(@Body() createPropertyDto: CreatePropertyDto, @CurrentUser() user:AuthUser) {
     return this.propertyService.create(createPropertyDto, user);
   }
 

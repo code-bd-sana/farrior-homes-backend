@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import mongoose, { HydratedDocument, Types } from 'mongoose';
+import { HydratedDocument } from 'mongoose';
 
 export enum PropertyStatus {
   PENDING = 'pending',
@@ -51,6 +51,15 @@ export class Property {
 
   @Prop({ type: String, default: '' })
   locationMapLink: string;
+
+  @Prop({ type: Boolean, default: '' })
+  isPosted:boolean
+
+  @Prop({type:String, required:false})
+   sellPostingDate:string
+   
+   @Prop({type:String, required:false})
+   sellPostingTime: string
 
   // @Prop({ type: Types.ObjectId, required: true })
   // propertyOwner: Types.ObjectId;

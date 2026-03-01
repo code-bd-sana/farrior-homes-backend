@@ -36,6 +36,12 @@ export class User {
   @Prop({ required: false, trim: true })
   officeAddress?: string;
 
+  @Prop({ required: false, trim: true })
+  homePhone?: string;
+
+  @Prop({ required: false, trim: true })
+  officePhone?: string;
+
   @Prop({ required: false, select: false })
   password?: string;
 

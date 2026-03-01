@@ -41,13 +41,13 @@ export class CreateAuthDto {
   @IsNotEmpty({ message: 'Phone is required & must be a string' })
   phone: string;
 
+  @IsOptional()
   @IsString({ message: 'Home address must be a string' })
-  @IsNotEmpty({ message: 'Home address is required & must be a string' })
-  homeAddress: string;
+  homeAddress?: string;
 
+  @IsOptional()
   @IsString({ message: 'Office address must be a string' })
-  @IsNotEmpty({ message: 'Office address is required & must be a string' })
-  officeAddress: string;
+  officeAddress?: string;
 
   @MinLength(6, { message: 'Password must be at least 6 characters long' })
   @IsString({ message: 'Password must be a string' })

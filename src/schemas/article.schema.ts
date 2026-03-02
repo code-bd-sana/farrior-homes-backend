@@ -1,4 +1,4 @@
-import { Prop, Schema } from "@nestjs/mongoose";
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 
 
 export enum ArticleCategory {
@@ -27,3 +27,6 @@ export class Article {
   category:ArticleCategory  
    
 }
+
+
+export const ArticleSchema = SchemaFactory.createForClass(Article)

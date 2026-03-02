@@ -65,7 +65,8 @@ export class PropertyController {
   // Private
   // Only property owner can delete their own property
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, SubscribedUserGuard)
+     @Roles(UserRole.USER)
   @Delete(':id')
   remove(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.propertyService.remove(id, user);

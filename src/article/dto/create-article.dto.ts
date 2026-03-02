@@ -1,21 +1,24 @@
-import { Prop } from "@nestjs/mongoose";
-import { ArticleCategory } from "src/schemas/article.schema";
+import { IsDateString, IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { ArticleCategory } from 'src/schemas/article.schema';
 
 export class CreateArticleDto {
 
-  @Prop({message:"Article Title Must be String"})
-  title:string
+  @IsString({ message: 'Article title must be a string.' })
+  @IsNotEmpty({ message: 'Article title is required.' })
+  title: string;
 
-  @Prop({message:"Publish date Is Required"})
-  publishDate:string
+  @IsOptional()
+  @IsDateString({}, { message: 'Publish date must be a valid date.' })
+  publishDate?: string;
 
-  @Prop({message:"Blog Details is Required"})
-  blogDetails:string
+  @IsString({ message: 'Blog details must be a string.' })
+  @IsNotEmpty({ message: 'Blog details are required.' })
+  blogDetails: string;
 
-  @Prop({message:"Image is Required"})
-  image:string
+  @IsString({ message: 'Image URL must be a string.' })
+  @IsNotEmpty({ message: 'Image is required.' })
+  image: string;
 
-  @Prop({message:"Category is Required", enum:ArticleCategory})
-  category:ArticleCategory
-
+  @IsEnum(ArticleCategory, { message: 'Category must be a valid article category.' })
+  category: ArticleCategory;
 }

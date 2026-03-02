@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Article } from 'src/schemas/article.schema';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { UpdateArticleDto } from './dto/update-article.dto';
-import { InjectModel } from '@nestjs/mongoose';
-import { Article } from 'src/schemas/article.schema';
-import { Model } from 'mongoose';
 
 @Injectable()
 
@@ -11,11 +11,12 @@ import { Model } from 'mongoose';
 export class ArticleService {
 
  constructor(
-    @InjectModel(Article.name) private readonly userModel: Model<Article>,
+    @InjectModel(Article.name) private readonly ArticleModel: Model<Article>,
 
   ) {}
-  create(createArticleDto: CreateArticleDto) {
-    return 'This action adds a new article';
+  async create(createArticleDto: CreateArticleDto) {
+  const newArticle = new this.ArticleModel(createArticleDto)
+ return await newArticle.save();
   }
 
   findAll() {

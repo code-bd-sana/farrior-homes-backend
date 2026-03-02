@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Article } from 'src/schemas/article.schema';
@@ -79,14 +79,40 @@ export class ArticleService {
   };
 }
 
-  findOne(id: number) {
-    return `This action returns a #${id} article`;
+   /**
+   * Find an article by ID
+   *
+   * @param {string} id - Article ID
+   * @returns {Promise<Article>} The article document
+   * @throws {NotFoundException} If article not found
+   */
+  async findOne(id: string) {
+    const article = await this.ArticleModel.findById(id).exec();
+    if (!article) {
+      throw new NotFoundException(`Article with ID ${id} not found`);
+    }
+    return article;
   }
 
-  update(id: number, updateArticleDto: UpdateArticleDto) {
-    return `This action updates a #${id} article`;
-  }
+   /**
+   * Update an article by ID
+   *
+   * @param {string} id - Article ID
+   * @param {UpdateArticleDto} updateArticleDto - Fields to update
+   * @returns {Promise<Article>} The updated article document
+   * @throws {NotFoundException} If article not found
+   */
+  async update(id: string, updateArticleDto: UpdateArticleDto) {
+    const updatedArticle = await this.ArticleModel
+      .findByIdAndUpdate(id, updateArticleDto, { new: true })
+      .exec();
 
+    if (!updatedArticle) {
+      throw new NotFoundException(`Article with ID ${id} not found`);
+    }
+
+    return updatedArticle;
+  }
   remove(id: number) {
     return `This action removes a #${id} article`;
   }

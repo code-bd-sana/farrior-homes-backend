@@ -19,21 +19,24 @@ export class ArticleController {
     return this.articleService.create(createArticleDto);
   }
 
-
-
+  
 @Get()
   async findAll( @Query() query: Record<string, any>) {
     return await this.articleService.findAll(query);
   }
 
+
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.articleService.findOne(+id);
+    return this.articleService.findOne(id);
   }
 
+
+  @UseGuards(JwtAuthGuard)
+  @Roles(UserRole.ADMIN)
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateArticleDto: UpdateArticleDto) {
-    return this.articleService.update(+id, updateArticleDto);
+    return this.articleService.update(id, updateArticleDto);
   }
 
   @Delete(':id')

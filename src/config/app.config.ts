@@ -13,7 +13,8 @@ interface config {
   MAIL_USER:string;
   MAIL_PASS: string;
   MAIL_HOST:string;
-  MAIL_PORT:string
+  MAIL_PORT:string;
+  CONTACT_RECEIVER_EMAIL:string
 }
 export const config: config = {
   PORT: parseInt(process.env.PORT as string, 10) || 5000,
@@ -31,4 +32,5 @@ export const config: config = {
   MAIL_PASS:process.env.MAIL_PASS as string,
   MAIL_HOST: process.env.MAIL_HOST as string,
   MAIL_PORT : process.env.MAIL_PORT as string,
+  CONTACT_RECEIVER_EMAIL :  process.env.CONTACT_RECEIVER_EMAIL as string,
 };

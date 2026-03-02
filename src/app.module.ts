@@ -11,6 +11,8 @@ import { PaymentModule } from './payment/payment.module';
 import { MaintenanceModule } from './maintenance/maintenance.module';
 import { ArticleModule } from './article/article.module';
 import { MailModule } from './mail/mail.module';
+import { ContactModule } from './contact/contact.module';
+import { MailService } from './mail/mail.service';
 
 @Module({
   imports: [
@@ -25,6 +27,7 @@ import { MailModule } from './mail/mail.module';
     MaintenanceModule,
     ArticleModule,
     MailModule,
+    ContactModule,
   ],
 
   controllers: [],

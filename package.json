@@ -21,11 +21,8 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1002.0",
-<<<<<<< HEAD
-=======
     "@aws-sdk/lib-storage": "^3.1002.0",
     "@aws-sdk/s3-request-presigner": "^3.1002.0",
->>>>>>> 8cca6e6fa82c3706425a4fd30ef760479f1249d1
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.3",
     "@nestjs/core": "^11.0.1",

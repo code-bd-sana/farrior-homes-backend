@@ -1,5 +1,4 @@
 import { Prop, Schema } from '@nestjs/mongoose';
-import { UserIdDto } from 'src/common/dto/mongoId.dto';
 
 export enum NotificationType {
   ALERT = 'ALERT', //*When a property matching their saved search criteria is listed.

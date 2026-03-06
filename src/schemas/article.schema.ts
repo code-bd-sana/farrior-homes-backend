@@ -12,10 +12,10 @@ export enum ArticleCategory {
 @Schema({ _id: false })
 export class ImageItem {
   @Prop({ required: true })
-  key: string; // s3 object key
+  key!: string; // s3 object key
 
   @Prop({ required: true })
-  image: string;
+  image!: string;
 }
 
 export const ImageItemSchema = SchemaFactory.createForClass(ImageItem);
@@ -26,22 +26,22 @@ export class Article {
     type: ImageItemSchema,
     required: true,
   })
-  image: ImageItem;
+  image!: ImageItem;
 
   @Prop({ required: true })
-  title: string;
+  title!: string;
 
   @Prop({ required: false })
-  publishDate: string;
+  publishDate?: string;
 
   @Prop({ required: true })
-  blogDetails: string;
+  blogDetails!: string;
 
   @Prop({ required: true })
-  category: ArticleCategory;
+  category!: ArticleCategory;
 
   @Prop({ required: true, ref: 'User' })
-  createdBy: Types.ObjectId;
+  createdBy!: Types.ObjectId;
 }
 
 export const ArticleSchema = SchemaFactory.createForClass(Article);

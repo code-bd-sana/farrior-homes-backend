@@ -1,13 +1,16 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import { config } from 'src/config/app.config';
+import { ClientProxy } from '@nestjs/microservices';
 
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
   private transporter: nodemailer.Transporter;
 
-  constructor() {
+  constructor(
+    @Inject('MAIL_SERVICE') private readonly client: ClientProxy,
+  ) {
     this.transporter = nodemailer.createTransport({
       host: config.MAIL_HOST,
       port: Number(config.MAIL_PORT) || 587,
@@ -39,6 +42,10 @@ export class MailService {
     }
   }
 
+  /**
+   * Send bulk mail by queueing individual email jobs.
+   * This offloads the work to the RabbitMQ workers.
+   */
   async sendBulkMail(options: {
     to: string[];
     subject: string;
@@ -46,14 +53,31 @@ export class MailService {
     text?: string;
   }) {
     const { to, ...rest } = options;
-    const results = await Promise.allSettled(
-      to.map((email) => this.sendMail({ to: email, ...rest })),
-    );
+    
+    // Queue each email as a background task
+    to.forEach(async (email) => {
+      await this.enqueueMail({ to: email, ...rest });
+    });
 
-    const successful = results.filter((r) => r.status === 'fulfilled').length;
-    const failed = results.filter((r) => r.status === 'rejected').length;
+    this.logger.log(`Bulk mail requested: ${to.length} emails queued for processing.`);
+    return { success: true, queuedCount: to.length };
+  }
 
-    this.logger.log(`Bulk mail summary: ${successful} sent, ${failed} failed`);
-    return { successful, failed };
+  /**
+   * Pushes an email task to the RabbitMQ queue.
+   */
+  async enqueueMail(data: {
+    to: string;
+    subject: string;
+    html: string;
+    text?: string;
+    retryCount?: number;
+  }) {
+    try {
+      this.client.emit('send_mail', data);
+    } catch (error) {
+      this.logger.error('Failed to enqueue email', error);
+      throw error;
+    }
   }
 }

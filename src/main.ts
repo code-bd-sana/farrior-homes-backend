@@ -16,20 +16,35 @@ import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filter/exception-response/exception-response.filter';
 import { ResponseInterceptorInterceptor } from './common/interceptor/response-interceptor/response-interceptor.interceptor';
 import { config } from './config/app.config';
+import { Transport, MicroserviceOptions } from '@nestjs/microservices';
 
 /**
  * Bootstraps the NestJS API Gateway application.
  *
  * 1. Creates the Nest HTTP app from {@link AppModule}.
- * 2. Sets `/api` as the global route prefix.
- * 3. Applies security headers via Helmet.
- * 4. Enables HTTP request logging via Morgan (`dev` format).
- * 5. Registers a global {@link ValidationPipe} (whitelist + transform).
- * 6. Registers the global {@link ResponseInterceptor} and {@link HttpExceptionFilter}.
- * 7. Listens on the port defined by `config.PORT` (fallback: 3000).
+ * 2. Connects RabbitMQ Microservice for background tasks.
+ * 3. Sets `/api` as the global route prefix.
+ * 4. Applies security headers via Helmet.
+ * 5. Enables HTTP request logging via Morgan (`dev` format).
+ * 6. Registers a global {@link ValidationPipe} (whitelist + transform).
+ * 7. Registers the global {@link ResponseInterceptor} and {@link HttpExceptionFilter}.
+ * 8. Listens on the port defined by `config.PORT` (fallback: 3000).
  */
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, { rawBody: true });
+
+  // Connect RabbitMQ for background workers
+  app.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.RMQ,
+    options: {
+      urls: [config.RABBITMQ_URL],
+      queue: config.RABBITMQ_MAIL_QUEUE,
+      noAck: false, // Essential for manual acknowledgement and reliability
+      queueOptions: {
+        durable: false,
+      },
+    },
+  });
 
   app.enableCors({
     origin: '*', // Allow all origins (adjust for production)
@@ -64,6 +79,9 @@ async function bootstrap(): Promise<void> {
 
   // Register global HTTP exception filter
   app.useGlobalFilters(new HttpExceptionFilter());
+
+  // Start microservices
+  await app.startAllMicroservices();
 
   const port = Number(config.PORT ?? 5000);
   await app.listen(port, () => {

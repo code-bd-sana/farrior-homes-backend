@@ -118,7 +118,7 @@ export class Property {
    * Schedule publish datetime
    */
   @Prop({ type: Date })
-  sellScheduleAt?: Date;
+  sellScheduleAt!: Date;
 
   /**
    * Property Images
@@ -126,7 +126,7 @@ export class Property {
   @Prop({
     type: [ImageItemSchema],
   })
-  images: ImageItem[];
+  images!: ImageItem[];
 
   /**
    * Thumbnail Image
@@ -135,7 +135,7 @@ export class Property {
     type: ImageItemSchema,
     required: true,
   })
-  thumbnail: ImageItem;
+  thumbnail!: ImageItem;
 
   /**
    * Property Owner
@@ -145,7 +145,7 @@ export class Property {
     ref: 'User',
     required: true,
   })
-  propertyOwner: Types.ObjectId;
+  propertyOwner!: Types.ObjectId;
 }
 
 export const PropertySchema = SchemaFactory.createForClass(Property);

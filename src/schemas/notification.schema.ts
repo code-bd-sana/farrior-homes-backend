@@ -23,7 +23,7 @@ export class Notification {
   message!: string;
 
   @Prop({ enum: NotificationType })
-  type!: NotificationType;
+  type?: NotificationType;
 
   @Prop({ required: false })
   redirectLink?: string;

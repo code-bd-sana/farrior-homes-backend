@@ -33,7 +33,7 @@ export class Payment {
   stripePaymentIntentId?: string;
 
   @Prop({ default: false })
-  lifetimeAccessGranted?: boolean;
+  lifetimeAccessGranted!: boolean;
 
   @Prop({ type: Date, required: false })
   paidAt?: Date;

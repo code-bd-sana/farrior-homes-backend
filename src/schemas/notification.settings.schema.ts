@@ -15,10 +15,13 @@ export enum NotificationSettingsTitle {
 export class NotificationSettings {
   @Prop({ required: true, unique: true })
   name!: NotificationType;
+
   @Prop({ required: true, unique: true })
   title!: string;
+
   @Prop({ required: true })
   isActive!: boolean;
+
   @Prop({ required: true })
   description!: string;
 }

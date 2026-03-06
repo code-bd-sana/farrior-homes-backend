@@ -12,10 +12,10 @@ export enum ArticleCategory {
 @Schema({ _id: false })
 export class ImageItem {
   @Prop({ required: true })
-  key: string; // s3 object key
+  key!: string; // s3 object key
 
   @Prop({ required: true })
-  image: string;
+  image!: string;
 }
 
 export const ImageItemSchema = SchemaFactory.createForClass(ImageItem);

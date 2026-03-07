@@ -71,21 +71,18 @@ import { ChatGateway } from './chat.gateway';
 
     // ── JwtModule for WebSocket gateway token verification ────────────────
     // Uses the same secret as the HTTP JwtStrategy.
-    JwtModule.register({
-      secret: process.env.JWT_SECRET as string,
-      signOptions: { expiresIn: (process.env.JWT_EXPIRES_IN ?? '7d') as never },
-    }),
+    JwtModule.register(jwtConfig),
   ],
 
   controllers: [
-    ChatController,       // REST API: conversations + message history
-    ChatMessageConsumer,  // RabbitMQ consumer: batches → MongoDB flush
+    ChatController, // REST API: conversations + message history
+    ChatMessageConsumer, // RabbitMQ consumer: batches → MongoDB flush
   ],
 
   providers: [
-    ChatService,          // MongoDB operations (bulkSave, getMessages, etc.)
-    ChatQueueService,     // RabbitMQ producer (wraps ClientProxy.emit)
-    ChatGateway,          // Socket.IO WebSocket gateway
+    ChatService, // MongoDB operations (bulkSave, getMessages, etc.)
+    ChatQueueService, // RabbitMQ producer (wraps ClientProxy.emit)
+    ChatGateway, // Socket.IO WebSocket gateway
   ],
 })
 export class ChatModule {}

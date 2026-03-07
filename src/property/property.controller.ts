@@ -101,8 +101,19 @@ export class PropertyController {
         image: url,
       })),
     };
+    try {
+      return await this.propertyService.create(dtoWithFiles, user);
+    } catch (error) {
+      // Rollback uploaded S3 files when DB save fails
+      const thumbnailKey = dtoWithFiles.thumbnail?.key;
+      const imageKeys = (dtoWithFiles.images || []).map((img) => img.key);
+      const keys = [thumbnailKey, ...imageKeys].filter(
+        (key): key is string => !!key,
+      );
 
-    return this.propertyService.create(dtoWithFiles, user);
+      await this.awsService.deleteMultipleFiles(keys).catch(() => {});
+      throw error;
+    }
   }
 
   @UseGuards(OptionalJwtAuthGuard)
@@ -113,7 +124,10 @@ export class PropertyController {
   }
   @UseGuards(JwtAuthGuard, SubscribedUserGuard)
   @Get('me')
-  findAllOwnProperty(@CurrentUser() user: AuthUser, @Query() query: Record<string, any>) {
+  findAllOwnProperty(
+    @CurrentUser() user: AuthUser,
+    @Query() query: Record<string, any>,
+  ) {
     console.log(user);
     return this.propertyService.findAllOwnProperty(user, query);
   }

@@ -119,6 +119,7 @@ export class PropertyService {
   }
 
   async findAll(user: AuthUser, query: Record<string, any>) {
+
     const filters: any = {};
 
     // Pagination
@@ -151,6 +152,7 @@ export class PropertyService {
       if (minPrice !== null) filters.price.$gte = minPrice;
       if (maxPrice !== null) filters.price.$lte = maxPrice;
     }
+    console.log(maxPrice);
 
     const squareFeetArray = toNumberArray(query?.squareFeet);
     if (squareFeetArray.length === 1) filters.squareFeet = squareFeetArray[0];
@@ -173,7 +175,7 @@ export class PropertyService {
     }
 
     if (!user?.role || user.role !== UserRole.ADMIN) {
-      filters.isPosted = true;
+      filters.isPublished = true;
     }
 
     const [properties, total] = await Promise.all([

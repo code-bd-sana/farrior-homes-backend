@@ -124,6 +124,8 @@ export class ArticleController {
     @UploadedFiles() files: { image?: Express.Multer.File[] },
   ) {
     let updatedDto: any = { ...updateArticleDto };
+    let uploadedImageKey: string | null = null;
+
     if (files?.image?.[0]) {
       // If a new image is provided, upload and set it
       const image = files.image[0];
@@ -131,14 +133,23 @@ export class ArticleController {
         image,
         `articles/${user.userId}`,
       );
+      uploadedImageKey =
+        this.awsService.extractKeyFromUrl(imageUrl) ?? imageUrl;
       updatedDto.image = {
-        key: this.awsService.extractKeyFromUrl
-          ? (this.awsService.extractKeyFromUrl(imageUrl) ?? imageUrl)
-          : imageUrl,
+        key: uploadedImageKey,
         image: imageUrl,
       };
     }
-    return this.articleService.update(param.id, updatedDto);
+
+    try {
+      return await this.articleService.update(param.id, updatedDto);
+    } catch (error) {
+      // Rollback newly uploaded image if DB update fails
+      if (uploadedImageKey) {
+        await this.awsService.deleteFile(uploadedImageKey).catch(() => {});
+      }
+      throw error;
+    }
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

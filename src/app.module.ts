@@ -15,11 +15,14 @@ import { ContactModule } from './contact/contact.module';
 import { AwsService } from './common/aws/aws.service';
 import { AwsModule } from './common/aws/aws.module';
 import { DocumentModule } from './document/document.module';
+import { RedisModule } from './redis/redis.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
     AwsModule,
     MongooseConnectionsModule,
+    RedisModule,        // Global Redis Pub/Sub (must come before ChatModule)
     AuthModule,
     PropertyModule,
     UserModule,
@@ -32,6 +35,7 @@ import { DocumentModule } from './document/document.module';
     MailModule,
     ContactModule,
     DocumentModule,
+    ChatModule,         // Real-time chat system
   ],
 
   controllers: [],

@@ -17,6 +17,7 @@ import { HttpExceptionFilter } from './common/filter/exception-response/exceptio
 import { ResponseInterceptorInterceptor } from './common/interceptor/response-interceptor/response-interceptor.interceptor';
 import { config } from './config/app.config';
 import { Transport, MicroserviceOptions } from '@nestjs/microservices';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 
 /**
  * Bootstraps the NestJS API Gateway application.
@@ -33,7 +34,7 @@ import { Transport, MicroserviceOptions } from '@nestjs/microservices';
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, { rawBody: true });
 
-  // Connect RabbitMQ for background workers
+  // Connect RabbitMQ microservice #1 — Mail queue
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.RMQ,
     options: {
@@ -45,6 +46,23 @@ async function bootstrap(): Promise<void> {
       },
     },
   });
+
+  // Connect RabbitMQ microservice #2 — Chat message queue
+  // Uses a separate durable queue so chat messages survive broker restarts.
+  app.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.RMQ,
+    options: {
+      urls: [config.RABBITMQ_URL],
+      queue: config.RABBITMQ_CHAT_QUEUE,
+      noAck: false, // Manual ACK: consumer calls channel.ack() after buffering
+      queueOptions: {
+        durable: true, // Durable: survives RabbitMQ restarts
+      },
+    },
+  });
+
+  // Enable Socket.IO WebSocket adapter for the /chat namespace
+  app.useWebSocketAdapter(new IoAdapter(app));
 
   app.enableCors({
     origin: '*', // Allow all origins (adjust for production)

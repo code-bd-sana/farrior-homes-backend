@@ -47,7 +47,7 @@ export class PropertyController {
       ],
       {
         storage: memoryStorage(),
-        limits: { fileSize: 5 * 1024 * 1024 },
+        limits: { fileSize: 50 * 1024 * 1024 },
         fileFilter: (req, file, cb) => {
           if (!file.mimetype.startsWith('image/')) {
             return cb(
@@ -101,8 +101,19 @@ export class PropertyController {
         image: url,
       })),
     };
+    try {
+      return await this.propertyService.create(dtoWithFiles, user);
+    } catch (error) {
+      // Rollback uploaded S3 files when DB save fails
+      const thumbnailKey = dtoWithFiles.thumbnail?.key;
+      const imageKeys = (dtoWithFiles.images || []).map((img) => img.key);
+      const keys = [thumbnailKey, ...imageKeys].filter(
+        (key): key is string => !!key,
+      );
 
-    return this.propertyService.create(dtoWithFiles, user);
+      await this.awsService.deleteMultipleFiles(keys).catch(() => {});
+      throw error;
+    }
   }
 
   @UseGuards(OptionalJwtAuthGuard)
@@ -110,6 +121,15 @@ export class PropertyController {
   findAll(@CurrentUser() user: AuthUser, @Query() query: Record<string, any>) {
     console.log(user);
     return this.propertyService.findAll(user, query);
+  }
+  @UseGuards(JwtAuthGuard, SubscribedUserGuard)
+  @Get('me')
+  findAllOwnProperty(
+    @CurrentUser() user: AuthUser,
+    @Query() query: Record<string, any>,
+  ) {
+    console.log(user);
+    return this.propertyService.findAllOwnProperty(user, query);
   }
 
   @Get(':id')

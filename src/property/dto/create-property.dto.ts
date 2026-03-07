@@ -1,20 +1,27 @@
 import { Type } from 'class-transformer';
+import { IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 import {
-  IsBoolean,
-  IsNumber,
-  IsOptional,
-  IsString,
-  Min
-} from 'class-validator';
+  PropertyModerationStatus,
+  PropertyStatus,
+} from 'src/schemas/property.schema';
 
 export class CreatePropertyDto {
   @IsString({ message: 'Property name is required' })
   propertyName!: string;
 
-  // @IsEnum(PropertyStatus, {
-  //   message: `Status - (allowed values: ${Object.values(PropertyStatus).join(', ')})`,
-  // })
-  // status!: PropertyStatus;
+  @IsString({ message: 'Property type is required' })
+  propertyType!: string;
+
+  @IsEnum(PropertyStatus, {
+    message: `Property status must be one of: ${Object.values(PropertyStatus).join(', ')}`,
+  })
+  propertyStatus!: PropertyStatus;
+
+  @IsOptional()
+  @IsEnum(PropertyModerationStatus, {
+    message: `Moderation status must be one of: ${Object.values(PropertyModerationStatus).join(', ')}`,
+  })
+  moderationStatus?: PropertyModerationStatus;
 
   @IsString({ message: 'Overview is required' })
   overview!: string;
@@ -52,23 +59,18 @@ export class CreatePropertyDto {
   yearBuilt!: number;
 
   @IsString({ message: 'More details are required' })
-  moreDetails!: string;
+  moreDetails?: string;
 
   @IsOptional()
   // @IsUrl({}, { message: 'Location map link must be a valid URL' })
   locationMapLink?: string;
 
-  @IsOptional()
-  @IsBoolean({ message: 'IsPosted must be boolean' })
-  IsPosted?: boolean;
+  @IsString({ message: 'Address is required' })
+  address!: string;
 
   @IsOptional()
   @IsString({ message: 'Posting date must be string' })
   sellPostingDate?: string;
-
-  @IsOptional()
-  @IsString({ message: 'Posting Time must be string' })
-  sellPostingTime?: string;
 
   @IsOptional()
   thumbnail?: any;
@@ -76,6 +78,5 @@ export class CreatePropertyDto {
   @IsOptional()
   images?: any;
 
-  @IsString({ message: 'Propety status is must be sting' })
-  propertyStatus:string
+
 }

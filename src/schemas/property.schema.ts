@@ -4,9 +4,15 @@ import { HydratedDocument, Types } from 'mongoose';
 export type PropertyDocument = HydratedDocument<Property>;
 
 export enum PropertyStatus {
-  PENDING = 'pending',
+  SALE = 'sale',
+  RENT = 'rent',
+  SOLD = 'sold',
+}
+
+export enum PropertyModerationStatus {
   ACTIVE = 'active',
-  BAN = 'ban',
+  PENDING = 'pending',
+  BANNED = 'banned',
 }
 
 /**
@@ -40,9 +46,18 @@ export class Property {
   @Prop({
     required: true,
     enum: PropertyStatus,
-    default: PropertyStatus.ACTIVE,
   })
   status!: PropertyStatus;
+
+  /**
+   * Property moderation status (admin lifecycle)
+   */
+  @Prop({
+    required: true,
+    enum: PropertyModerationStatus,
+    default: PropertyModerationStatus.PENDING,
+  })
+  moderationStatus!: PropertyModerationStatus;
 
   /**
    * Overview (QuillJS HTML)
@@ -99,14 +114,20 @@ export class Property {
   /**
    * More Details (QuillJS HTML)
    */
-  @Prop({ required: true })
-  moreDetails!: string;
+  @Prop()
+  moreDetails?: string;
 
   /**
    * Location Map Link
    */
   @Prop({ default: '' })
-  locationMapLink!: string;
+  locationMapLink?: string;
+
+  /**
+   * Property Address
+   */
+  @Prop({ required: true, trim: true })
+  address!: string;
 
   /**
    * Publish Status
@@ -126,7 +147,7 @@ export class Property {
   @Prop({
     type: [ImageItemSchema],
   })
-  images!: ImageItem[];
+  images?: ImageItem[];
 
   /**
    * Thumbnail Image
@@ -147,10 +168,11 @@ export class Property {
   })
   propertyOwner!: Types.ObjectId;
 
-    @Prop({ default: '' })
-  propertyStatus!: string;
-
-
+  /**
+   * Property Type
+   */
+  @Prop({ required: true, trim: true })
+  propertyType!: string;
 }
 
 export const PropertySchema = SchemaFactory.createForClass(Property);

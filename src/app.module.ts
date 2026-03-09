@@ -17,6 +17,7 @@ import { AwsService } from './common/aws/aws.service';
 import { AwsModule } from './common/aws/aws.module';
 import { DocumentModule } from './document/document.module';
 import { SeedModule } from './seed/seed.module';
+import { SavePropertyModule } from './save-property/save-property.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { SeedModule } from './seed/seed.module';
     ContactModule,
     DocumentModule,
     SeedModule,
+    SavePropertyModule,
   ],
 
   controllers: [],

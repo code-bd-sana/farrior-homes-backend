@@ -9,7 +9,6 @@ import { AwsService } from 'src/common/aws/aws.service';
 import { AuthUser } from 'src/common/interface/auth-user.interface';
 import { Property, PropertyStatus } from 'src/schemas/property.schema';
 import { SaveProperty } from 'src/schemas/save-property.schema';
-import { User, UserDocument } from 'src/schemas/user.schema';
 
 @Injectable()
 export class SavePropertyService {
@@ -18,8 +17,6 @@ export class SavePropertyService {
     private readonly savePropertyModel: Model<SaveProperty>,
     @InjectModel(Property.name)
     private readonly propertyModel: Model<Property>,
-    @InjectModel(User.name)
-    private readonly userModel: Model<UserDocument>,
     private readonly awsService: AwsService,
   ) {}
 
@@ -166,24 +163,28 @@ export class SavePropertyService {
 
   async getOverview(user: AuthUser) {
     const userObjectId = new Types.ObjectId(user.userId);
-    const userDoc = await this.userModel
-      .findById(userObjectId)
-      .select('propertyOwn propertyBuy propertySell')
-      .lean();
-    if (!userDoc) {
-      throw new NotFoundException('User not found');
-    }
 
-    const [savedCount, rentCount, sellingPostCount, recentSaved] =
+    const [ownCount, buyCount, sellCount, rentCount, savedCount, sellingPostCount, recentSaved] =
       await Promise.all([
-        this.savePropertyModel.countDocuments({ userId: userObjectId }),
         this.propertyModel.countDocuments({
           propertyOwner: userObjectId,
-          status: PropertyStatus.RENT,
+        }),
+        this.propertyModel.countDocuments({
+          propertyOwner: userObjectId,
+          status: PropertyStatus.SOLD,
         }),
         this.propertyModel.countDocuments({
           propertyOwner: userObjectId,
           status: PropertyStatus.SALE,
+        }),
+        this.propertyModel.countDocuments({
+          propertyOwner: userObjectId,
+          status: PropertyStatus.RENT,
+        }),
+        this.savePropertyModel.countDocuments({ userId: userObjectId }),
+        this.propertyModel.countDocuments({
+          propertyOwner: userObjectId,
+          isPublished: true,
         }),
         this.savePropertyModel
           .find({ userId: userObjectId })
@@ -225,15 +226,9 @@ export class SavePropertyService {
 
     return {
       stats: {
-        ownCount: Array.isArray(userDoc.propertyOwn)
-          ? userDoc.propertyOwn.length
-          : 0,
-        buyCount: Array.isArray(userDoc.propertyBuy)
-          ? userDoc.propertyBuy.length
-          : 0,
-        sellCount: Array.isArray(userDoc.propertySell)
-          ? userDoc.propertySell.length
-          : 0,
+        ownCount,
+        buyCount,
+        sellCount,
         rentCount,
         savedCount,
         sellingPostCount,

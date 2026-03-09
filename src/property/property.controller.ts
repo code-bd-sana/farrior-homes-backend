@@ -47,7 +47,7 @@ export class PropertyController {
       ],
       {
         storage: memoryStorage(),
-        limits: { fileSize: 5 * 1024 * 1024 },
+        limits: { fileSize: 50 * 1024 * 1024 },
         fileFilter: (req, file, cb) => {
           if (!file.mimetype.startsWith('image/')) {
             return cb(
@@ -101,8 +101,19 @@ export class PropertyController {
         image: url,
       })),
     };
+    try {
+      return await this.propertyService.create(dtoWithFiles, user);
+    } catch (error) {
+      // Rollback uploaded S3 files when DB save fails
+      const thumbnailKey = dtoWithFiles.thumbnail?.key;
+      const imageKeys = (dtoWithFiles.images || []).map((img) => img.key);
+      const keys = [thumbnailKey, ...imageKeys].filter(
+        (key): key is string => !!key,
+      );
 
-    return this.propertyService.create(dtoWithFiles, user);
+      await this.awsService.deleteMultipleFiles(keys).catch(() => {});
+      throw error;
+    }
   }
 
   @UseGuards(OptionalJwtAuthGuard)
@@ -110,6 +121,15 @@ export class PropertyController {
   findAll(@CurrentUser() user: AuthUser, @Query() query: Record<string, any>) {
     console.log(user);
     return this.propertyService.findAll(user, query);
+  }
+  @UseGuards(JwtAuthGuard, SubscribedUserGuard)
+  @Get('me')
+  findAllOwnProperty(
+    @CurrentUser() user: AuthUser,
+    @Query() query: Record<string, any>,
+  ) {
+    console.log(user);
+    return this.propertyService.findAllOwnProperty(user, query);
   }
 
   @Get(':id')
@@ -120,12 +140,75 @@ export class PropertyController {
   @UseGuards(JwtAuthGuard, SubscribedUserGuard)
   @Roles(UserRole.USER)
   @Patch(':id')
-  update(
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'images', maxCount: 10 },
+        { name: 'thumbnail', maxCount: 1 },
+      ],
+      {
+        storage: memoryStorage(),
+        limits: { fileSize: 50 * 1024 * 1024 },
+        fileFilter: (req, file, cb) => {
+          if (!file.mimetype.startsWith('image/')) {
+            return cb(
+              new BadRequestException('Only image files are allowed'),
+              false,
+            );
+          }
+          cb(null, true);
+        },
+      },
+    ),
+  )
+  async update(
     @Param() param: MongoIdDto,
     @Body() updatePropertyDto: UpdatePropertyDto,
     @CurrentUser() user: AuthUser,
+    @UploadedFiles()
+    files?: {
+      images?: Express.Multer.File[];
+      thumbnail?: Express.Multer.File[];
+    },
   ) {
-    return this.propertyService.update(param.id, updatePropertyDto, user);
+    const dtoWithFiles: UpdatePropertyDto & {
+      images?: { key: string; image: string }[];
+      thumbnail?: { key: string; image: string };
+    } = { ...updatePropertyDto };
+
+    let uploadedKeys: string[] = [];
+
+    if (files?.thumbnail?.length) {
+      const thumbnailUrl = await this.awsService.uploadFile(
+        files.thumbnail[0],
+        `properties/${user.userId}/thumbnail`,
+      );
+      const thumbnailKey =
+        this.awsService.extractKeyFromUrl(thumbnailUrl) ?? thumbnailUrl;
+      dtoWithFiles.thumbnail = { key: thumbnailKey, image: thumbnailUrl };
+      uploadedKeys.push(thumbnailKey);
+    }
+
+    if (files?.images?.length) {
+      const imageUrls = await this.awsService.uploadMultipleFiles(
+        files.images,
+        `properties/${user.userId}/images`,
+      );
+      dtoWithFiles.images = imageUrls.map((url) => {
+        const key = this.awsService.extractKeyFromUrl(url) ?? url;
+        uploadedKeys.push(key);
+        return { key, image: url };
+      });
+    }
+
+    try {
+      return await this.propertyService.update(param.id, dtoWithFiles, user);
+    } catch (error) {
+      if (uploadedKeys.length) {
+        await this.awsService.deleteMultipleFiles(uploadedKeys).catch(() => {});
+      }
+      throw error;
+    }
   }
 
   @UseGuards(JwtAuthGuard, SubscribedUserGuard)

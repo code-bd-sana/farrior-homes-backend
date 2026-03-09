@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -7,8 +8,13 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { AwsService } from 'src/common/aws/aws.service';
 import { AuthUser } from 'src/common/interface/auth-user.interface';
-import { Property } from 'src/schemas/property.schema';
+import {
+  Property,
+  PropertyModerationStatus,
+  PropertyStatus,
+} from 'src/schemas/property.schema';
 import { UserRole } from 'src/schemas/user.schema';
+import { User, UserDocument } from 'src/schemas/user.schema';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { PropertyResponse } from './property.interface';
@@ -19,6 +25,8 @@ export class PropertyService {
   constructor(
     @InjectModel(Property.name)
     private readonly propertyModel: Model<Property>,
+    @InjectModel(User.name)
+    private readonly userModel: Model<UserDocument>,
     private readonly awsService: AwsService,
   ) {}
 
@@ -41,16 +49,50 @@ export class PropertyService {
 
     const payload = {
       ...createPropertyDto,
+      status: createPropertyDto.propertyStatus as PropertyStatus,
+      moderationStatus:
+        createPropertyDto.moderationStatus ?? PropertyModerationStatus.PENDING,
+      propertyType: createPropertyDto.propertyType,
       propertyOwner: new Types.ObjectId(user.userId),
       images: normalizedImages,
       thumbnail: normalizedThumbnail,
     };
 
     const createdPropertyDoc = new this.propertyModel(payload);
-    const savedProperty = await createdPropertyDoc.save();
+    let savedProperty: any;
+    try {
+      savedProperty = await createdPropertyDoc.save();
+    } catch (error: any) {
+      throw new BadRequestException(
+        error?.message || 'Property validation failed',
+      );
+    }
     const propertyObj = savedProperty.toObject();
 
-    //! public image link generation faaaaaahhhhhhhhhhhhh
+    // Ensure user document has propertyOwn, propertyBuy, propertySell fields
+
+    const userDoc = await this.userModel.findById(user.userId);
+    const updateFields: any = {};
+    if (userDoc) {
+      if (!userDoc.propertyOwn) updateFields.propertyOwn = [];
+      if (!userDoc.propertyBuy) updateFields.propertyBuy = [];
+      if (!userDoc.propertySell) updateFields.propertySell = [];
+      // If any field was missing, set it
+      if (Object.keys(updateFields).length > 0) {
+        await this.userModel.findByIdAndUpdate(user.userId, {
+          $set: updateFields,
+        });
+      }
+    }
+
+    // Add property to user's propertyOwn array
+    await this.userModel.findByIdAndUpdate(
+      user.userId,
+      { $addToSet: { propertyOwn: savedProperty._id } },
+      { new: true },
+    );
+
+    //! public image link generation
     // Generate signed URLs only (strings)
     const imagesSignedUrls: string[] = await Promise.all(
       (propertyObj.images || []).map(async (img: any) => {
@@ -67,6 +109,7 @@ export class PropertyService {
 
     return {
       ...propertyObj,
+      moreDetails: propertyObj.moreDetails ?? '',
       propertyOwner:
         propertyObj.propertyOwner?.toString?.() ??
         String(propertyObj.propertyOwner),
@@ -76,7 +119,13 @@ export class PropertyService {
   }
 
   async findAll(user: AuthUser, query: Record<string, any>) {
+
     const filters: any = {};
+
+    // Pagination
+    const page = Number(query?.page) || 1;
+    const limit = Number(query?.limit) || 10;
+    const skip = (page - 1) * limit;
 
     const toNumber = (value: any) => {
       if (value === undefined || value === null || value === '') return null;
@@ -103,6 +152,7 @@ export class PropertyService {
       if (minPrice !== null) filters.price.$gte = minPrice;
       if (maxPrice !== null) filters.price.$lte = maxPrice;
     }
+    console.log(maxPrice);
 
     const squareFeetArray = toNumberArray(query?.squareFeet);
     if (squareFeetArray.length === 1) filters.squareFeet = squareFeetArray[0];
@@ -125,55 +175,192 @@ export class PropertyService {
     }
 
     if (!user?.role || user.role !== UserRole.ADMIN) {
-      filters.isPosted = true;
+      filters.isPublished = true;
     }
 
-    const properties = await this.propertyModel.find(filters).lean();
+    const [properties, total] = await Promise.all([
+      this.propertyModel.find(filters).skip(skip).limit(limit).lean(),
+      this.propertyModel.countDocuments(filters),
+    ]);
 
     const propertiesWithSignedUrls = await Promise.all(
       properties.map(async (prop) => {
         const images = await Promise.all(
-          (prop.images || []).map(async (img: any) => ({
-            key: img.key,
-            image: await this.awsService.generateSignedUrl(img.key),
-          })),
-        );
+          (prop.images || []).map(async (img: any) => {
+            if (!img?.key) return null;
 
-        const thumbnail = {
-          key: prop.thumbnail.key,
-          image: await this.awsService.generateSignedUrl(prop.thumbnail.key),
-        };
+            return {
+              key: img.key,
+              image: await this.awsService.generateSignedUrl(img.key),
+            };
+          }),
+        );
+        let thumbnail: { key: string; image: string } | null = null;
+
+        if (prop?.thumbnail?.key) {
+          thumbnail = {
+            key: prop.thumbnail.key,
+            image: await this.awsService.generateSignedUrl(prop.thumbnail.key),
+          };
+        }
 
         return { ...prop, images, thumbnail };
       }),
     );
 
-    return propertiesWithSignedUrls;
+    return {
+      meta: {
+        page,
+        limit,
+        total,
+        totalPage: Math.ceil(total / limit),
+      },
+      data: propertiesWithSignedUrls,
+    };
   }
+  async findAllOwnProperty(user: AuthUser, query: Record<string, any>) {
+    const page = Number(query?.page) || 1;
+    const limit = Number(query?.limit) || 10;
+    const skip = (page - 1) * limit;
 
+    const ownerId = new Types.ObjectId(user.userId);
+
+    const filters: any = {
+      propertyOwner: ownerId,
+    };
+
+    const properties = await this.propertyModel
+      .find(filters)
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const total = await this.propertyModel.countDocuments(filters);
+
+    const propertiesWithSignedUrls = await Promise.all(
+      properties.map(async (prop) => {
+        const images = await Promise.all(
+          (prop.images || []).map(async (img: any) => {
+            if (!img?.key) return null;
+
+            return {
+              key: img.key,
+              image: await this.awsService.generateSignedUrl(img.key),
+            };
+          }),
+        );
+        let thumbnail;
+        if (prop.thumbnail?.key) {
+          thumbnail = {
+            key: prop.thumbnail.key,
+            image: await this.awsService.generateSignedUrl(prop.thumbnail.key),
+          };
+        }
+
+        return {
+          ...prop,
+          images,
+          thumbnail,
+        };
+      }),
+    );
+
+    return {
+      meta: {
+        page,
+        limit,
+        total,
+        totalPage: Math.ceil(total / limit),
+      },
+      data: propertiesWithSignedUrls,
+    };
+  }
   async findOne(id: MongoIdDto['id']) {
-    const property = await this.propertyModel.findOne({ _id: id });
-    return property;
+    const property = await this.propertyModel.findOne({ _id: id }).lean();
+
+    if (!property) {
+      throw new NotFoundException('Property not found');
+    }
+
+    const images = await Promise.all(
+      (property.images || []).map(async (img: any) => {
+        if (!img?.key) return null;
+
+        return {
+          key: img.key,
+          image: await this.awsService.generateSignedUrl(img.key),
+        };
+      }),
+    );
+
+    let thumbnail: { key: string; image: string } | null = null;
+
+    if (property?.thumbnail?.key) {
+      thumbnail = {
+        key: property.thumbnail.key,
+        image: await this.awsService.generateSignedUrl(property.thumbnail.key),
+      };
+    }
+
+    const ownerId =
+      property.propertyOwner?.toString?.() ?? String(property.propertyOwner);
+    let propertyOwnerEmail: string | null = null;
+
+    if (ownerId && Types.ObjectId.isValid(ownerId)) {
+      const owner = await this.userModel
+        .findById(ownerId)
+        .select('email')
+        .lean<{ email?: string }>();
+      propertyOwnerEmail = owner?.email ?? null;
+    }
+
+    return {
+      ...property,
+      propertyOwner: ownerId,
+      propertyOwnerEmail,
+      images: images.filter(Boolean),
+      thumbnail,
+    };
   }
 
   async update(
     id: MongoIdDto['id'],
-    updatePropertyDto: UpdatePropertyDto,
+    updatePropertyDto: UpdatePropertyDto & {
+      images?: { key: string; image: string }[];
+      thumbnail?: { key: string; image: string };
+    },
     user: AuthUser,
   ) {
-    const propertyExists = await this.propertyModel.exists({ _id: id });
-    if (!propertyExists) throw new NotFoundException('Property not found');
+    const existingProperty = await this.propertyModel.findById(id);
+    if (!existingProperty) throw new NotFoundException('Property not found');
 
-    const isOwner = await this.propertyModel.exists({
-      _id: id,
-      propertyOwner: user.userId,
-    });
-    if (!isOwner) throw new ForbiddenException('Forbidden');
+    if (String(existingProperty.propertyOwner) !== user.userId) {
+      throw new ForbiddenException('Forbidden');
+    }
 
-    const updated = await this.propertyModel.updateOne(
-      { _id: id },
-      { $set: updatePropertyDto },
-    );
+    const payload: Record<string, any> = { ...updatePropertyDto };
+
+    if (payload.propertyStatus) {
+      payload.status = payload.propertyStatus as PropertyStatus;
+      delete payload.propertyStatus;
+    }
+
+    if (payload.sellPostingDate) {
+      const scheduleValue = `${payload.sellPostingDate}T${payload.sellPostingTime || '00:00'}`;
+      const scheduleDate = new Date(scheduleValue);
+      if (!Number.isNaN(scheduleDate.getTime())) {
+        payload.sellScheduleAt = scheduleDate;
+      }
+    }
+
+    delete payload.sellPostingDate;
+    delete payload.sellPostingTime;
+
+    const updated = await this.propertyModel
+      .findByIdAndUpdate(id, { $set: payload }, { new: true, runValidators: true })
+      .lean();
+
     return updated;
   }
 

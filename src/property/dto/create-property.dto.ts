@@ -1,23 +1,34 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsEnum,
   IsNumber,
   IsOptional,
   IsString,
-  IsUrl,
   Min,
 } from 'class-validator';
-import { PropertyStatus } from 'src/schemas/property.schema';
+import {
+  PropertyModerationStatus,
+  PropertyStatus,
+} from 'src/schemas/property.schema';
 
 export class CreatePropertyDto {
   @IsString({ message: 'Property name is required' })
   propertyName!: string;
 
+  @IsString({ message: 'Property type is required' })
+  propertyType!: string;
+
   @IsEnum(PropertyStatus, {
-    message: `Status - (allowed values: ${Object.values(PropertyStatus).join(', ')})`,
+    message: `Property status must be one of: ${Object.values(PropertyStatus).join(', ')}`,
   })
-  status!: PropertyStatus;
+  propertyStatus!: PropertyStatus;
+
+  @IsOptional()
+  @IsEnum(PropertyModerationStatus, {
+    message: `Moderation status must be one of: ${Object.values(PropertyModerationStatus).join(', ')}`,
+  })
+  moderationStatus?: PropertyModerationStatus;
 
   @IsString({ message: 'Overview is required' })
   overview!: string;
@@ -55,27 +66,33 @@ export class CreatePropertyDto {
   yearBuilt!: number;
 
   @IsString({ message: 'More details are required' })
-  moreDetails!: string;
+  moreDetails?: string;
 
   @IsOptional()
-  @IsUrl({}, { message: 'Location map link must be a valid URL' })
+  // @IsUrl({}, { message: 'Location map link must be a valid URL' })
   locationMapLink?: string;
 
-  @IsOptional()
-  @IsBoolean({ message: 'IsPosted must be boolean' })
-  IsPosted?: boolean;
+  @IsString({ message: 'Address is required' })
+  address!: string;
 
   @IsOptional()
   @IsString({ message: 'Posting date must be string' })
   sellPostingDate?: string;
 
   @IsOptional()
-  @IsString({ message: 'Posting Time must be string' })
+  @IsString({ message: 'Posting time must be string' })
   sellPostingTime?: string;
+
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean({ message: 'isPublished must be boolean' })
+  isPublished?: boolean;
 
   @IsOptional()
   thumbnail?: any;
 
   @IsOptional()
   images?: any;
+
+
 }

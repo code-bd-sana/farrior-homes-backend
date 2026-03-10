@@ -65,9 +65,10 @@ import { ChatService } from './chat.service';
 import { SendMessageDto } from './dto/send-message.dto';
 import { MessagePayload, SocketUser } from './interfaces/chat.interfaces';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const sanitizeHtml = require('sanitize-html') as typeof import('sanitize-html');
 
 import { Types } from 'mongoose';
+import { ChatQueueService } from './services/chat-queue.service';
+import { REDIS_COMMANDS } from 'src/redis/redis.constants';
 
 /**
  * Extend the Socket type to carry authenticated user data after handshake.

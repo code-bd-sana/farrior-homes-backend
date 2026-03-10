@@ -197,7 +197,10 @@ export class ChatService {
    * @param dto - Validated GetMessagesDto (conversationId, cursor, limit).
    * @param userId - Authenticated user's MongoDB ObjectId string.
    */
-  async getMessages(dto: GetMessagesDto, userId: string): Promise<PaginatedMessages> {
+  async getMessages(
+    dto: GetMessagesDto,
+    userId: string,
+  ): Promise<PaginatedMessages> {
     const limit = dto.limit ?? 20;
     const query: Record<string, unknown> = {
       conversationId: new Types.ObjectId(dto.conversationId),

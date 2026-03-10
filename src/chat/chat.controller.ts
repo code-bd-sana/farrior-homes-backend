@@ -21,9 +21,7 @@ import { BadRequestException, Body, Controller, Get, Logger, Post, Query, Upload
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import { AwsService } from 'src/common/aws/aws.service';
 import type { AuthUser } from 'src/common/interface/auth-user.interface';
-import { MongoIdDto } from 'src/common/dto/mongoId.dto';
 import { ChatService } from './chat.service';
 import { CreateConversationDto } from './dto/create-conversation.dto';
 import { GetConversationsDto } from './dto/get-conversations.dto';
@@ -32,7 +30,7 @@ import { AttachmentService } from './services/attachment.service';
 import { AttachmentPayload } from './interfaces/chat.interfaces';
 
 @Controller('chat')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard) // All chat endpoints require authentication
 export class ChatController {
   private readonly logger = new Logger(ChatController.name);
 
@@ -59,7 +57,11 @@ export class ChatController {
     @Body() dto: CreateConversationDto,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.chatService.createConversation(dto, user.userId);
+    const conversation = await this.chatService.createConversation(
+      dto,
+      user.userId,
+    );
+    return conversation;
   }
 
   /**

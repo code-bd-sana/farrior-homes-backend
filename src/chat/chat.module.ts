@@ -1,17 +1,47 @@
+/**
+ * @fileoverview Chat feature module.
+ *
+ * Wires together all chat system components:
+ *
+ *   ┌─────────────────────────────────────────────┐
+ *   │              ChatModule                     │
+ *   │                                             │
+ *   │  Imports:                                   │
+ *   │    MongooseModule  → Conversation, Message  │
+ *   │    ClientsModule   → CHAT_SERVICE (RabbitMQ)│
+ *   │    JwtModule       → for Gateway JWT verify │
+ *   │                                             │
+ *   │  Controllers:                               │
+ *   │    ChatController      (REST API)           │
+ *   │    ChatMessageConsumer (RabbitMQ consumer)  │
+ *   │                                             │
+ *   │  Providers:                                 │
+ *   │    ChatService         (MongoDB ops)        │
+ *   │    ChatQueueService    (RMQ producer)       │
+ *   │    ChatGateway         (WebSocket)          │
+ *   └─────────────────────────────────────────────┘
+ *
+ * RedisModule is registered as @Global() so it does not need to be
+ * imported here explicitly — its providers are available app-wide.
+ */
+
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { JwtModule } from '@nestjs/jwt';
 import { config } from 'src/config/app.config';
 import { jwtConfig } from 'src/common/jwt.config';
-import { AwsModule } from 'src/common/aws/aws.module';
 
+// Schemas
 import { Conversation, ConversationSchema } from 'src/schemas/conversation.schema';
 import { Message, MessageSchema } from 'src/schemas/message.schema';
 import { Property, PropertySchema } from 'src/schemas/property.schema';
 
+// Controllers
 import { ChatController } from './chat.controller';
 import { ChatMessageConsumer } from './consumers/chat-message.consumer';
+
+// Providers
 import { ChatService } from './chat.service';
 import { ChatQueueService } from './services/chat-queue.service';
 import { ChatGateway } from './chat.gateway';
@@ -20,7 +50,7 @@ import { AttachmentService } from './services/attachment.service';
 
 @Module({
   imports: [
-    AwsModule,
+    // ── MongoDB schemas ────────────────────────────────────────────────────
     MongooseModule.forFeature([
       { name: Conversation.name, schema: ConversationSchema },
       { name: Message.name, schema: MessageSchema },

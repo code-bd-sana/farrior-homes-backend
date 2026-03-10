@@ -16,7 +16,6 @@ import { PaymentModule } from './payment/payment.module';
 import { PropertyModule } from './property/property.module';
 import { RedisModule } from './redis/redis.module';
 import { SeedModule } from './seed/seed.module';
-import { SavePropertyModule } from './save-property/save-property.module';
 import { ServiceModule } from './service/service.module';
 import { UserModule } from './user/user.module';
 
@@ -39,7 +38,6 @@ import { UserModule } from './user/user.module';
     DocumentModule,
     ChatModule, // Real-time chat system
     SeedModule,
-    SavePropertyModule,
   ],
 
   controllers: [],

@@ -12,13 +12,10 @@
 import { Inject, Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { AwsService } from 'src/common/aws/aws.service';
 import { Conversation, ConversationDocument } from 'src/schemas/conversation.schema';
-import { Message, MessageDocument as MessageDoc, MessageStatus } from 'src/schemas/message.schema';
-import { User, UserDocument } from 'src/schemas/user.schema';
+import { Message, MessageDocument as MessageDoc } from 'src/schemas/message.schema';
+import { MessageStatus } from 'src/schemas/message.schema';
 import { CreateConversationDto } from './dto/create-conversation.dto';
-import { CreateMessageDto } from './dto/create-message.dto';
-import { ForwardMessageDto } from './dto/forward-message.dto';
 import { GetMessagesDto } from './dto/get-messages.dto';
 import {
   MessageDocument,
@@ -37,6 +34,7 @@ export class ChatService {
   constructor(
     @InjectModel(Conversation.name)
     private readonly conversationModel: Model<ConversationDocument>,
+
     @InjectModel(Message.name)
     private readonly messageModel: Model<MessageDoc>,
 
@@ -65,10 +63,13 @@ export class ChatService {
     dto: CreateConversationDto,
     userId: string,
   ): Promise<ConversationDocument> {
-    const allParticipantIds = [userId, ...dto.participantIds].map(
-      (id) => new Types.ObjectId(id),
-    );
+    // Combine the requesting user with the given participant IDs
+    const allParticipantIds = [
+      userId,
+      ...dto.participantIds,
+    ].map((id) => new Types.ObjectId(id));
 
+    // Remove duplicate IDs in case the client accidentally included themselves
     const uniqueIds = [
       ...new Map(allParticipantIds.map((id) => [id.toString(), id])).values(),
     ];
@@ -86,14 +87,7 @@ export class ChatService {
         .populate('participants', 'name email profileImage')
         .populate('property', 'propertyName address price bedrooms bathrooms squareFeet thumbnail');
       if (existing) {
-        if (!existing.directKey) {
-          try {
-            existing.directKey = directKey;
-            await existing.save();
-          } catch {
-            // ignore duplicate key race; existing conversation can still be used
-          }
-        }
+        this.logger.debug(`Reusing existing 1-on-1 conversation: ${existing._id}`);
         return existing;
       }
     }
@@ -199,7 +193,6 @@ export class ChatService {
         'Conversation not found or you are not a participant',
       );
     }
-
     return conversation;
   }
 
@@ -225,13 +218,12 @@ export class ChatService {
     userId: string,
   ): Promise<PaginatedMessages> {
     const limit = dto.limit ?? 20;
-    const userObjectId = new Types.ObjectId(userId);
-
     const query: Record<string, unknown> = {
       conversationId: new Types.ObjectId(dto.conversationId),
       deletedForUsers: { $ne: new Types.ObjectId(userId) },
     };
 
+    // Apply cursor: only fetch messages OLDER than the cursor timestamp
     if (dto.cursor) {
       query.createdAt = { $lt: new Date(dto.cursor) };
     }
@@ -331,241 +323,19 @@ export class ChatService {
     };
   }
 
-  async createMessage(dto: CreateMessageDto, userId: string): Promise<MessageResponse> {
-    await this.validateParticipant(dto.conversationId, userId);
-
-    const messageText = (dto.message ?? '').trim();
-    const attachments = dto.attachments ?? [];
-
-    if (!messageText && attachments.length === 0) {
-      throw new BadRequestException('Message text or attachments are required');
-    }
-
-    const createdAt = new Date();
-    const created = await this.messageModel.create({
-      conversationId: new Types.ObjectId(dto.conversationId),
-      senderId: new Types.ObjectId(userId),
-      message: messageText,
-      attachments,
-      status: MessageStatus.SENT,
-      unsentForEveryone: false,
-      deletedFor: [],
-      createdAt,
-    });
-
-    await this.conversationModel.updateOne(
-      { _id: new Types.ObjectId(dto.conversationId) },
-      {
-        $set: {
-          lastMessage: messageText || 'Attachment',
-          lastMessageAt: createdAt,
-        },
-      },
-    );
-
-    const populated = await this.messageModel
-      .findById(created._id)
-      .populate({
-        path: 'senderId',
-        select: 'name profileImage isOnline lastActiveAt',
-      })
-      .lean()
-      .exec();
-
-    if (!populated) {
-      throw new NotFoundException('Message not found after creation');
-    }
-
-    return this.mapMessageResponse(populated as any);
-  }
-
-  async unsendMessage(messageId: string, userId: string) {
-    if (!Types.ObjectId.isValid(messageId)) {
-      throw new BadRequestException('Invalid messageId format');
-    }
-
-    const updated = await this.messageModel.findOneAndUpdate(
-      {
-        _id: new Types.ObjectId(messageId),
-        senderId: new Types.ObjectId(userId),
-      },
-      {
-        $set: {
-          unsentForEveryone: true,
-          message: '',
-          attachments: [],
-        },
-      },
-      { new: true },
-    );
-
-    if (!updated) {
-      throw new NotFoundException('Message not found');
-    }
-
-    const conversationId = updated.conversationId.toString();
-    await this.refreshConversationLastMessage(conversationId);
-
-    return {
-      success: true,
-      messageId: updated._id.toString(),
-      conversationId,
-      message: {
-        _id: updated._id.toString(),
-        conversationId,
-        senderId: updated.senderId.toString(),
-        message: '',
-        attachments: [],
-        status: updated.status,
-        unsentForEveryone: true,
-        forwardedFrom: updated.forwardedFrom
-          ? updated.forwardedFrom.toString()
-          : null,
-        deletedFor: Array.isArray(updated.deletedFor)
-          ? updated.deletedFor.map((id: any) => id?.toString?.() ?? String(id))
-          : [],
-        createdAt: new Date(updated.createdAt).toISOString(),
-      } as MessageResponse,
-    };
-  }
-
-  async deleteMessageForMe(messageId: string, userId: string) {
-    if (!Types.ObjectId.isValid(messageId)) {
-      throw new BadRequestException('Invalid messageId format');
-    }
-
-    const message = await this.messageModel.findById(messageId);
-    if (!message) {
-      throw new NotFoundException('Message not found');
-    }
-
-    await this.validateParticipant(message.conversationId.toString(), userId);
-
-    const conversationId = message.conversationId.toString();
-    await this.messageModel.updateOne(
-      { _id: new Types.ObjectId(messageId) },
-      { $addToSet: { deletedFor: new Types.ObjectId(userId) } },
-    );
-
-    return { success: true, messageId, conversationId, userId };
-  }
-
-  async forwardMessage(
-    messageId: string,
-    dto: ForwardMessageDto,
-    userId: string,
-  ): Promise<MessageResponse> {
-    if (!Types.ObjectId.isValid(messageId)) {
-      throw new BadRequestException('Invalid messageId format');
-    }
-
-    const sourceMessage = await this.messageModel.findById(messageId).lean();
-    if (!sourceMessage) {
-      throw new NotFoundException('Source message not found');
-    }
-
-    await this.validateParticipant(sourceMessage.conversationId.toString(), userId);
-    await this.validateParticipant(dto.targetConversationId, userId);
-
-    if (sourceMessage.unsentForEveryone) {
-      throw new BadRequestException('Cannot forward an unsent message');
-    }
-
-    const createdAt = new Date();
-    const created = await this.messageModel.create({
-      conversationId: new Types.ObjectId(dto.targetConversationId),
-      senderId: new Types.ObjectId(userId),
-      message: sourceMessage.message,
-      attachments: sourceMessage.attachments ?? [],
-      status: MessageStatus.SENT,
-      unsentForEveryone: false,
-      forwardedFrom: sourceMessage._id,
-      deletedFor: [],
-      createdAt,
-    });
-
-    await this.conversationModel.updateOne(
-      { _id: new Types.ObjectId(dto.targetConversationId) },
-      {
-        $set: {
-          lastMessage: sourceMessage.message || 'Attachment',
-          lastMessageAt: createdAt,
-        },
-      },
-    );
-
-    const populated = await this.messageModel
-      .findById(created._id)
-      .populate({
-        path: 'senderId',
-        select: 'name profileImage isOnline lastActiveAt',
-      })
-      .lean()
-      .exec();
-
-    if (!populated) {
-      throw new NotFoundException('Forwarded message not found after creation');
-    }
-
-    return this.mapMessageResponse(populated as any);
-  }
-
-  async markConversationSeen(conversationId: string, userId: string) {
-    await this.validateParticipant(conversationId, userId);
-
-    const result = await this.messageModel.updateMany(
-      {
-        conversationId: new Types.ObjectId(conversationId),
-        senderId: { $ne: new Types.ObjectId(userId) },
-        status: { $ne: MessageStatus.SEEN },
-        deletedFor: { $ne: new Types.ObjectId(userId) },
-      },
-      { $set: { status: MessageStatus.SEEN } },
-    );
-
-    return { modifiedCount: result.modifiedCount };
-  }
-
-  async setUserPresence(userId: string, isOnline: boolean): Promise<void> {
-    if (!Types.ObjectId.isValid(userId)) {
-      return;
-    }
-
-    await this.userModel.updateOne(
-      { _id: new Types.ObjectId(userId) },
-      {
-        $set: {
-          isOnline,
-          ...(isOnline ? {} : { lastActiveAt: new Date() }),
-        },
-      },
-    );
-  }
-
-  async getPresence(userId: string) {
-    if (!Types.ObjectId.isValid(userId)) {
-      throw new BadRequestException('Invalid userId format');
-    }
-
-    const user = await this.userModel
-      .findById(new Types.ObjectId(userId))
-      .select('isOnline lastActiveAt name')
-      .lean();
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    return {
-      userId,
-      name: user.name,
-      isOnline: Boolean(user.isOnline),
-      lastActiveAt: user.lastActiveAt
-        ? new Date(user.lastActiveAt).toISOString()
-        : null,
-    };
-  }
-
+  /**
+   * Bulk-persists an array of message payloads to MongoDB.
+   *
+   * Called ONLY by the RabbitMQ consumer (ChatMessageConsumer) during a
+   * batch flush.  Uses `insertMany` with `ordered: false` so a single
+   * validation failure does not block the rest of the batch.
+   *
+   * After saving, updates the `lastMessage` / `lastMessageAt` snapshot
+   * on all affected conversations in a single bulk write.
+   *
+   * @param payloads - Array of MessagePayload objects from RabbitMQ.
+   * @returns        - Number of messages successfully saved.
+   */
   async bulkSaveMessages(payloads: MessagePayload[]): Promise<number> {
     if (payloads.length === 0) return 0;
 
@@ -584,9 +354,14 @@ export class ChatService {
       createdAt: new Date(p.createdAt),
     }));
 
+    // Bulk insert — ordered: false means partial success is acceptable
     const result = await this.messageModel.insertMany(docs, { ordered: false });
     const savedCount = result.length;
 
+    this.logger.log(`Bulk saved ${savedCount}/${payloads.length} messages to MongoDB`);
+
+    // ── Update lastMessage snapshot on each conversation ──────────────────
+    // Group messages by conversationId and pick the most recent one
     const latestByConversation = new Map<string, MessagePayload>();
     for (const payload of payloads) {
       const existing = latestByConversation.get(payload.conversationId);
@@ -595,6 +370,7 @@ export class ChatService {
       }
     }
 
+    // Build a bulkWrite operation to update all affected conversations at once
     const conversationUpdates = [...latestByConversation.values()].map((latest) => ({
       updateOne: {
         filter: { _id: new Types.ObjectId(latest.conversationId) },
@@ -611,9 +387,10 @@ export class ChatService {
       await this.conversationModel.bulkWrite(conversationUpdates, {
         ordered: false,
       });
+      this.logger.debug(
+        `Updated lastMessage on ${conversationUpdates.length} conversation(s)`,
+      );
     }
-
-    this.logger.log(`Bulk saved ${savedCount}/${payloads.length} messages`);
 
     return savedCount;
   }

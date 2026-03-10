@@ -16,7 +16,6 @@ import {
   IsMongoId,
   ArrayMinSize,
   ArrayMaxSize,
-  IsOptional,
 } from 'class-validator';
 
 export class CreateConversationDto {

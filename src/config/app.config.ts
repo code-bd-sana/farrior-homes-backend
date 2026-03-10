@@ -23,7 +23,6 @@ interface config {
   RABBITMQ_URL: string;
   RABBITMQ_MAIL_QUEUE: string;
   RABBITMQ_CHAT_QUEUE: string;
-  RABBITMQ_ENABLED: boolean;
   REDIS_URL: string;
 }
 export const config: config = {
@@ -51,6 +50,5 @@ export const config: config = {
   RABBITMQ_URL: process.env.RABBITMQ_URL || 'amqp://localhost:5672',
   RABBITMQ_MAIL_QUEUE: process.env.RABBITMQ_MAIL_QUEUE || 'mail_queue',
   RABBITMQ_CHAT_QUEUE: process.env.RABBITMQ_CHAT_QUEUE || 'chat_message_queue',
-  RABBITMQ_ENABLED: process.env.RABBITMQ_ENABLED === 'true',
   REDIS_URL: process.env.REDIS_URL || 'redis://localhost:6379',
 };

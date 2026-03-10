@@ -45,7 +45,7 @@
  *   typingStopped    → broadcast to room (excluding sender)
  */
 
-import { Inject, Logger, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Logger, UsePipes, ValidationPipe, Inject } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import {
   ConnectedSocket,
@@ -58,7 +58,8 @@ import {
 } from '@nestjs/websockets';
 import Redis from 'ioredis';
 import { Server, Socket } from 'socket.io';
-import { REDIS_COMMANDS } from 'src/redis/redis.constants';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const sanitizeHtml = require('sanitize-html') as typeof import('sanitize-html');
 import { MessageStatus } from 'src/schemas/message.schema';
 import { ChatService } from './chat.service';
 import { SendMessageDto } from './dto/send-message.dto';
@@ -68,6 +69,9 @@ const sanitizeHtml = require('sanitize-html') as typeof import('sanitize-html');
 
 import { Types } from 'mongoose';
 
+/**
+ * Extend the Socket type to carry authenticated user data after handshake.
+ */
 interface AuthenticatedSocket extends Socket {
   data: {
     user: SocketUser;
@@ -85,13 +89,14 @@ const RATE_LIMIT_MAX = 20;
 const RATE_LIMIT_WINDOW_MS = 10_000; // 10 seconds
 
 @WebSocketGateway({
-  namespace: 'chat',
+  namespace: 'chat', // ws://host:port/chat
   cors: {
     origin: process.env.FRONTEND_BASE_URL ?? '*',
     credentials: true,
   },
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  /** The underlying Socket.IO server instance. */
   @WebSocketServer()
   private readonly server!: Server;
 
@@ -99,6 +104,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   constructor(
     private readonly chatService: ChatService,
+    private readonly chatQueueService: ChatQueueService,
     private readonly jwtService: JwtService,
     @Inject(REDIS_COMMANDS.REDIS_CLIENT) private readonly redis: Redis,
   ) {}
@@ -120,17 +126,22 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       socket.handshake.headers?.authorization?.replace('Bearer ', '');
 
     if (!token) {
+      this.logger.warn(
+        `[${socket.id}] Connection rejected — no token provided`,
+      );
       socket.emit('error', { message: 'Authentication token required' });
       socket.disconnect();
       return;
     }
 
     try {
+      // Verify the JWT using the same secret as the HTTP guards
       const payload = this.jwtService.verify<SocketUser & { sub: string }>(
         token,
         { secret: process.env.JWT_SECRET as string },
       );
 
+      // Attach the verified user data to the socket for use in event handlers
       socket.data.user = {
         userId: payload.sub,
         email: payload.email,
@@ -273,17 +284,29 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const { userId } = socket.data.user;
 
     try {
+      // Validate the user is a participant of this conversation
       await this.chatService.validateParticipant(data.conversationId, userId);
+
+      // Join the Socket.IO room (idempotent — safe to call multiple times)
       const roomName = `conversation:${data.conversationId}`;
       await socket.join(roomName);
+
+      this.logger.debug(
+        `[${socket.id}] User ${userId} joined room: ${roomName}`,
+      );
+
+      // Confirm to the client that join was successful
       socket.emit('joinedRoom', {
         conversationId: data.conversationId,
         room: roomName,
       });
     } catch (error) {
-      socket.emit('error', {
-        message: error instanceof Error ? error.message : 'Join failed',
-      });
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.warn(
+        `[${socket.id}] joinConversation failed for user ${userId}: ${errorMessage}`,
+      );
+      socket.emit('error', { message: errorMessage });
     }
   }
 
@@ -303,6 +326,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     new ValidationPipe({
       whitelist: true,
       transform: true,
+      // Emit 'error' event instead of throwing HTTP exception
       exceptionFactory: (errors) => errors,
     }),
   )
@@ -326,10 +350,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       await this.chatService.validateParticipant(dto.conversationId, userId);
     } catch (error) {
-      socket.emit('error', {
-        message:
-          error instanceof Error ? error.message : 'Failed to unsend message',
-      });
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      socket.emit('error', { message: errorMessage });
+      return;
     }
 
     // ── XSS Sanitization ────────────────────────────────────────────────────
@@ -401,6 +425,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() data: { conversationId: string },
   ): Promise<void> {
     const { userId } = socket.data.user;
+    const roomName = `conversation:${data.conversationId}`;
 
     try {
       // Validate participation
@@ -412,7 +437,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         seenBy: userId,
         seenAt: new Date().toISOString(),
       });
-      await this.emitConversationUpdates(data.conversationId);
+
+      this.logger.debug(
+        `User ${userId} marked conversation ${data.conversationId} as seen`,
+      );
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';

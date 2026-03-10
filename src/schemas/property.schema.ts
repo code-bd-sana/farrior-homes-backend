@@ -138,8 +138,8 @@ export class Property {
   /**
    * Schedule publish datetime
    */
-@Prop({ type: Date, default: Date.now })
-sellScheduleAt?: Date;
+  @Prop({ type: Date })
+  sellScheduleAt!: Date;
 
   /**
    * Property Images
@@ -173,8 +173,6 @@ sellScheduleAt?: Date;
    */
   @Prop({ required: true, trim: true })
   propertyType!: string;
-
-  
 }
 
 export const PropertySchema = SchemaFactory.createForClass(Property);

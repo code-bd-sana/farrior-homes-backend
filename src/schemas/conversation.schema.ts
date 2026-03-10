@@ -63,23 +63,6 @@ export class Conversation {
    */
   @Prop({ type: Date, default: null, index: true })
   lastMessageAt!: Date | null;
-
-  @Prop({
-    type: MongooseSchema.Types.ObjectId,
-    ref: 'Property',
-    default: null,
-    index: true,
-  })
-  propertyId?: Types.ObjectId | null;
-
-  @Prop({
-    type: String,
-    default: null,
-    unique: true,
-    sparse: true,
-    index: true,
-  })
-  directKey?: string | null;
 }
 
 export const ConversationSchema = SchemaFactory.createForClass(Conversation);

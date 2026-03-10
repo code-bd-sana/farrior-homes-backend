@@ -8,7 +8,6 @@ import { AwsModule } from 'src/common/aws/aws.module';
 
 import { Conversation, ConversationSchema } from 'src/schemas/conversation.schema';
 import { Message, MessageSchema } from 'src/schemas/message.schema';
-import { User, UserSchema } from 'src/schemas/user.schema';
 import { Property, PropertySchema } from 'src/schemas/property.schema';
 
 import { ChatController } from './chat.controller';
@@ -16,6 +15,8 @@ import { ChatMessageConsumer } from './consumers/chat-message.consumer';
 import { ChatService } from './chat.service';
 import { ChatQueueService } from './services/chat-queue.service';
 import { ChatGateway } from './chat.gateway';
+import { AwsModule } from 'src/common/aws/aws.module';
+import { AttachmentService } from './services/attachment.service';
 
 @Module({
   imports: [
@@ -23,27 +24,41 @@ import { ChatGateway } from './chat.gateway';
     MongooseModule.forFeature([
       { name: Conversation.name, schema: ConversationSchema },
       { name: Message.name, schema: MessageSchema },
-      { name: User.name, schema: UserSchema },
       { name: Property.name, schema: PropertySchema },
     ]),
-    ...(config.RABBITMQ_ENABLED
-      ? [
-          ClientsModule.register([
-            {
-              name: 'CHAT_SERVICE',
-              transport: Transport.RMQ,
-              options: {
-                urls: [config.RABBITMQ_URL],
-                queue: config.RABBITMQ_CHAT_QUEUE,
-                queueOptions: { durable: true },
-              },
-            },
-          ]),
-        ]
-      : []),
+
+    // ── RabbitMQ client for the CHAT queue ────────────────────────────────
+    // Mirrors the mail module pattern exactly.
+    // 'CHAT_SERVICE' token is injected into ChatQueueService.
+    ClientsModule.register([
+      {
+        name: 'CHAT_SERVICE',
+        transport: Transport.RMQ,
+        options: {
+          urls: [config.RABBITMQ_URL],
+          queue: config.RABBITMQ_CHAT_QUEUE,
+          // durable: true ensures messages survive RabbitMQ restarts
+          queueOptions: { durable: true },
+        },
+      },
+    ]),
+
+    // ── JwtModule for WebSocket gateway token verification ────────────────
+    // Uses the same secret as the HTTP JwtStrategy.
     JwtModule.register(jwtConfig),
+    AwsModule,
   ],
-  controllers: [ChatController, ChatMessageConsumer],
-  providers: [ChatService, ChatQueueService, ChatGateway],
+
+  controllers: [
+    ChatController, // REST API: conversations + message history
+    ChatMessageConsumer, // RabbitMQ consumer: batches → MongoDB flush
+  ],
+
+  providers: [
+    ChatService, // MongoDB operations (bulkSave, getMessages, etc.)
+    ChatQueueService, // RabbitMQ producer (wraps ClientProxy.emit)
+    ChatGateway, // Socket.IO WebSocket gateway
+    AttachmentService, // Service for handling S3 attachments safely
+  ],
 })
 export class ChatModule {}

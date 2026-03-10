@@ -32,4 +32,28 @@ export class ChatQueueService {
       await this.chatService.bulkSaveMessages([payload]);
     }
   }
+
+  async enqueueMessageUnsent(payload: { messageId: string, conversationId: string, userId: string }): Promise<void> {
+    try {
+      this.client.emit('message_unsent', payload);
+    } catch (e) {
+      this.logger.error(`Failed to enqueue unsend for message ${payload.messageId}`, e);
+    }
+  }
+
+  async enqueueMessageDeletedForMe(payload: { messageId: string, conversationId: string, userId: string }): Promise<void> {
+    try {
+      this.client.emit('message_deleted_for_me', payload);
+    } catch (e) {
+      this.logger.error(`Failed to enqueue deleteForMe for message ${payload.messageId}`, e);
+    }
+  }
+
+  async enqueueAttachmentDeleted(payload: { messageId: string, conversationId: string, attachmentKey: string, userId: string }): Promise<void> {
+    try {
+      this.client.emit('attachment_deleted', payload);
+    } catch (e) {
+      this.logger.error(`Failed to enqueue attachment delete for message ${payload.messageId}`, e);
+    }
+  }
 }

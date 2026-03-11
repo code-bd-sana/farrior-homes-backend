@@ -48,9 +48,9 @@ export class UserService {
     }
   }
 
-  private async sanitizeUserWithResolvedImage<T extends { password?: string; profileImage?: string }>(
-    user: T,
-  ): Promise<Omit<T, 'password'>> {
+  private async sanitizeUserWithResolvedImage<
+    T extends { password?: string; profileImage?: string },
+  >(user: T): Promise<Omit<T, 'password'>> {
     const sanitized = this.sanitizeUser(user) as Omit<T, 'password'>;
 
     if ('profileImage' in sanitized) {

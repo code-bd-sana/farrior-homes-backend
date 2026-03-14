@@ -7,7 +7,7 @@
  * filter before listening on the configured port.
  */
 
-import { RequestMethod, ValidationPipe } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { IoAdapter } from '@nestjs/platform-socket.io';
@@ -89,10 +89,8 @@ async function bootstrap(): Promise<void> {
     allowedHeaders: 'Content-Type, Accept, Authorization, X-Requested-With',
   });
 
-  // Set global route prefix to "api", but exclude webhook from prefix
-  app.setGlobalPrefix('api', {
-    exclude: [{ path: 'webhook', method: RequestMethod.POST }],
-  });
+  // Set global route prefix to "api" for all routes, including Stripe webhook
+  app.setGlobalPrefix('api');
 
   // Apply security headers
   app.use(helmet());

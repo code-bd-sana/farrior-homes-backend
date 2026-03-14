@@ -1,11 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { CreateDocumentDto } from './dto/create-document.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { AwsService } from 'src/common/aws/aws.service';
+import { MongoIdDto } from 'src/common/dto/mongoId.dto';
 import { AuthUser } from 'src/common/interface/auth-user.interface';
 import { Document } from 'src/schemas/document.schema';
-import { MongoIdDto } from 'src/common/dto/mongoId.dto';
+import { CreateDocumentDto } from './dto/create-document.dto';
 
 @Injectable()
 export class DocumentService {

@@ -19,6 +19,7 @@ import { SeedModule } from './seed/seed.module';
 import { ServiceModule } from './service/service.module';
 import { UserModule } from './user/user.module';
 import { SavePropertyModule } from './save-property/save-property.module';
+import { UserNotificationSettingsModule } from './user-notification-settings/user-notification-settings.module';
 
 @Module({
   imports: [
@@ -38,7 +39,7 @@ import { SavePropertyModule } from './save-property/save-property.module';
     ContactModule,
     DocumentModule,
     ChatModule, // Real-time chat system
-    SeedModule, SavePropertyModule,
+    SeedModule, SavePropertyModule, UserNotificationSettingsModule,
   ],
 
   controllers: [],

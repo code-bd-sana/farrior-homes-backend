@@ -2,18 +2,20 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { InjectModel } from '@nestjs/mongoose';
-import { User, UserDocument } from 'src/schemas/user.schema';
-import { Model } from 'mongoose';
-import * as bcrypt from 'bcrypt';
-import { LoginAuthDto } from './dto/login-auth.dto';
 import { JwtService } from '@nestjs/jwt';
+import { InjectModel } from '@nestjs/mongoose';
+import * as bcrypt from 'bcrypt';
+import { Model } from 'mongoose';
 import { UserIdDto } from 'src/common/dto/mongoId.dto';
+import { MailService } from 'src/mail/mail.service';
+import { User, UserDocument, UserRole } from 'src/schemas/user.schema';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { CreateAuthDto } from './dto/create-auth.dto';
+import { LoginAuthDto } from './dto/login-auth.dto';
 
 @Injectable()
 export class AuthService {
@@ -28,7 +30,68 @@ export class AuthService {
   constructor(
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
     private readonly jwtService: JwtService,
+    private readonly mailService: MailService,
   ) {}
+
+  private readonly logger = new Logger(AuthService.name);
+
+  private async notifyAdminsNewRegistration(user: {
+    name?: string;
+    email: string;
+    role?: string;
+  }) {
+    try {
+      const admins = await this.userModel
+        .find({
+          role: UserRole.ADMIN,
+          isSuspended: { $ne: true },
+          email: { $exists: true, $ne: '' },
+        })
+        .select('email name')
+        .lean();
+
+      if (!admins.length) {
+        return;
+      }
+
+      const subject = 'New user registration alert';
+      const text = `A new user has registered. Name: ${user.name || 'N/A'}, Email: ${user.email}, Role: ${user.role || 'user'}.`;
+
+      await Promise.all(
+        admins.map((admin) => {
+const html = `
+  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+    <h2 style="color: #c26828; margin-top: 0;">New User Registration</h2>
+    <p>Hello ${(admin.name || 'Admin')},</p>
+    <p>A new user has registered on the platform.</p>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 16px;">
+      <tr>
+        <td style="padding: 10px; background: #f8f8f8; font-weight: bold; width: 30%;">Name</td>
+        <td style="padding: 10px; background: #f8f8f8;">${(user.name || 'N/A')}</td>
+      </tr>
+      <tr>
+        <td style="padding: 10px; font-weight: bold;">Email</td>
+        <td style="padding: 10px;">${(user.email)}</td>
+      </tr>
+      <tr>
+        <td style="padding: 10px; background: #f8f8f8; font-weight: bold;">Role</td>
+        <td style="padding: 10px; background: #f8f8f8;">${(user.role || 'user')}</td>
+      </tr>
+    </table>
+  </div>
+`;
+          return this.mailService.sendMailDirect({
+            to: admin.email,
+            subject,
+            text,
+            html,
+          });
+        }),
+      );
+    } catch (error) {
+      console.error('[ADMIN-REPORT] Failed to notify admins on registration:', error);
+    }
+  }
 
   /**
    * Register a new user with the provided details.
@@ -61,17 +124,28 @@ export class AuthService {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    const fallbackAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(rest.name || 'User')}&background=0D8ABC&color=fff`;
 
     try {
       const createdUser = await this.userModel.create({
         ...rest,
         password: hashedPassword,
+        profileImage: {
+          key: fallbackAvatarUrl,
+          image: fallbackAvatarUrl,
+        },
       });
 
       // convert created user document to plain object
       const user = createdUser.toObject();
       // remove password field from user object before returning to client
       delete user.password;
+
+      void this.notifyAdminsNewRegistration({
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      });
 
       return {
         message: customMessage || 'User created successfully',
@@ -85,6 +159,15 @@ export class AuthService {
         (error as { code?: number }).code === 11000
       ) {
         throw new ConflictException('Email or phone already exists');
+      }
+
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'name' in error &&
+        (error as { name?: string }).name === 'ValidationError'
+      ) {
+        throw new BadRequestException('Invalid registration data');
       }
 
       throw error;

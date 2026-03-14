@@ -1,16 +1,17 @@
 import { Module } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { AuthController } from './auth.controller';
-import { MongooseModule } from '@nestjs/mongoose';
-import { User, UserSchema } from 'src/schemas/user.schema';
 import { JwtModule } from '@nestjs/jwt';
+import { MongooseModule } from '@nestjs/mongoose';
 import { PassportModule } from '@nestjs/passport';
 import { jwtConfig } from 'src/common/jwt.config';
+import { MailModule } from 'src/mail/mail.module';
+import { User, UserSchema } from 'src/schemas/user.schema';
+import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
+import { GoogleStrategy } from './google.strategy';
+import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { JwtStrategy } from './jwt.strategy';
-import { GoogleStrategy } from './google.strategy';
-import { GoogleAuthGuard } from './guards/google-auth.guard';
 
 // TODO: Need to create google client id and secret and add them to .env file to enable google auth functionality
 const hasGoogleConfig =
@@ -22,6 +23,7 @@ const hasGoogleConfig =
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
     PassportModule,
     JwtModule.register(jwtConfig),
+    MailModule,
   ],
 
   controllers: [AuthController],

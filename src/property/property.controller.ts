@@ -170,6 +170,13 @@ export class PropertyController {
       thumbnail?: Express.Multer.File[];
     },
   ) {
+    console.log('\n========== 🧭 PROPERTY CONTROLLER UPDATE HIT ==========');
+    console.log(`[PropertyController.update] Property ID: ${param.id}`);
+    console.log(`[PropertyController.update] User ID: ${user?.userId}`);
+    console.log(
+      `[PropertyController.update] Body keys: ${Object.keys(updatePropertyDto || {}).join(', ')}`,
+    );
+
     const dtoWithFiles: UpdatePropertyDto & {
       images?: { key: string; image: string }[];
       thumbnail?: { key: string; image: string };
@@ -201,8 +208,16 @@ export class PropertyController {
     }
 
     try {
-      return await this.propertyService.update(param.id, dtoWithFiles, user);
+      const response = await this.propertyService.update(
+        param.id,
+        dtoWithFiles,
+        user,
+      );
+      console.log('[PropertyController.update] ✅ Service update completed');
+      console.log('========== 🧭 PROPERTY CONTROLLER UPDATE END ==========\n');
+      return response;
     } catch (error) {
+      console.error('[PropertyController.update] ❌ Service update failed:', error);
       if (uploadedKeys.length) {
         await this.awsService.deleteMultipleFiles(uploadedKeys).catch(() => {});
       }

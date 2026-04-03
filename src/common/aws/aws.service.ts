@@ -1,14 +1,13 @@
 import {
-  DeleteObjectCommand,
-  DeleteObjectsCommand,
-  PutObjectCommand,
-  S3Client,
-  GetObjectCommand
+    DeleteObjectCommand,
+    DeleteObjectsCommand,
+    GetObjectCommand,
+    PutObjectCommand,
+    S3Client
 } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
-import { Injectable, Logger } from '@nestjs/common';
-import { v4 as uuidv4 } from 'uuid';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { Injectable, Logger } from '@nestjs/common';
 
 @Injectable()
 export class AwsService {
@@ -42,7 +41,7 @@ export class AwsService {
     folder: string,
   ): Promise<string> {
     const extension = file.originalname.split('.').pop() || '';
-    const fileName = `${uuidv4()}${extension ? '.' + extension : ''}`;
+    const fileName = `${crypto.randomUUID()}${extension ? '.' + extension : ''}`;
 
     const key = `${folder}/${fileName}`;
 
@@ -75,7 +74,7 @@ export class AwsService {
     folder: string,
   ): Promise<string> {
     const extension = file.originalname.split('.').pop() || '';
-    const fileName = `${uuidv4()}${extension ? '.' + extension : ''}`;
+    const fileName = `${crypto.randomUUID()}${extension ? '.' + extension : ''}`;
 
     const key = `${folder}/${fileName}`;
 

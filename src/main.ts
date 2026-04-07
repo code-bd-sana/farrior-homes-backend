@@ -72,7 +72,9 @@ async function bootstrap(): Promise<void> {
     'https://farriorhomes.com',
     'https://farriorhomes.com/',
     'https://farrior-home.vercel.app',
-    'https://farrior-home.vercel.app/'
+    'https://farrior-home.vercel.app/',
+    'https://farrior-homes.vercel.app',
+    'https://farrior-homes.vercel.app/'
   ].filter(Boolean);
 
   app.enableCors({

@@ -70,7 +70,9 @@ async function bootstrap(): Promise<void> {
     'http://localhost:3000',
     'http://127.0.0.1:3000',
     'https://farriorhomes.com',
-    'https://farriorhomes.com/'
+    'https://farriorhomes.com/',
+    'https://farrior-home.vercel.app',
+    'https://farrior-home.vercel.app/'
   ].filter(Boolean);
 
   app.enableCors({

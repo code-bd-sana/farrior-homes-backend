@@ -14,7 +14,7 @@ export class Payment {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   user!: Types.ObjectId;
 
-  @Prop({ required: true, default: 99 })
+  @Prop({ required: true, default: 0 })
   amount!: number;
 
   @Prop({ required: true, default: 'usd', lowercase: true, trim: true })
@@ -31,6 +31,12 @@ export class Payment {
 
   @Prop({ required: false, trim: true })
   stripePaymentIntentId?: string;
+
+  @Prop({ required: false, trim: true })
+  stripeSubscriptionId?: string;
+
+  @Prop({ required: false, trim: true, lowercase: true })
+  billingInterval?: string;
 
   @Prop({ default: false })
   lifetimeAccessGranted!: boolean;

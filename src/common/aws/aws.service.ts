@@ -1,9 +1,10 @@
 import {
-    DeleteObjectCommand,
-    DeleteObjectsCommand,
-    GetObjectCommand,
-    PutObjectCommand,
-    S3Client
+  DeleteObjectCommand,
+  DeleteObjectsCommand,
+  GetObjectCommand,
+  ListObjectsV2Command,
+  PutObjectCommand,
+  S3Client,
 } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
@@ -113,10 +114,7 @@ export class AwsService {
   /**
    * Upload single file
    */
-  async uploadFile(
-    file: Express.Multer.File,
-    folder: string,
-  ): Promise<string> {
+  async uploadFile(file: Express.Multer.File, folder: string): Promise<string> {
     const SIZE_THRESHOLD = 20 * 1024 * 1024;
 
     try {
@@ -145,9 +143,7 @@ export class AwsService {
     try {
       this.logger.log(`Uploading ${files.length} files`);
 
-      const uploadPromises = files.map((file) =>
-        this.uploadFile(file, folder),
-      );
+      const uploadPromises = files.map((file) => this.uploadFile(file, folder));
 
       const urls = await Promise.all(uploadPromises);
 
@@ -254,6 +250,26 @@ export class AwsService {
     }
   }
 
+  /**
+   * List S3 object keys for a folder prefix.
+   */
+  async listFilesByPrefix(prefix: string): Promise<string[]> {
+    try {
+      const command = new ListObjectsV2Command({
+        Bucket: process.env.AWS_S3_BUCKET_NAME!,
+        Prefix: prefix,
+      });
+
+      const result = await this.s3Client.send(command);
+
+      return (result.Contents || [])
+        .map((item) => item.Key)
+        .filter((key): key is string => Boolean(key));
+    } catch (error) {
+      this.logger.error(`Listing files failed → ${prefix}`, error);
+      throw error;
+    }
+  }
 
   /**
    * Helper to chunk array

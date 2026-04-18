@@ -15,6 +15,7 @@ import { NotificationModule } from './notification/notification.module';
 import { PaymentModule } from './payment/payment.module';
 import { PropertyModule } from './property/property.module';
 import { RedisModule } from './redis/redis.module';
+import { ReviewsModule } from './reviews/reviews.module';
 import { SeedModule } from './seed/seed.module';
 import { ServiceModule } from './service/service.module';
 import { UserModule } from './user/user.module';
@@ -38,8 +39,11 @@ import { UserNotificationSettingsModule } from './user-notification-settings/use
     MailModule,
     ContactModule,
     DocumentModule,
+    ReviewsModule,
     ChatModule, // Real-time chat system
-    SeedModule, SavePropertyModule, UserNotificationSettingsModule,
+    SeedModule,
+    SavePropertyModule,
+    UserNotificationSettingsModule,
   ],
 
   controllers: [],

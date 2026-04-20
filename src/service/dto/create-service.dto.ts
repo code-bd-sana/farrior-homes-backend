@@ -1,39 +1,52 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
-  IsMongoId,
+  IsBoolean,
   IsNotEmpty,
   IsOptional,
   IsString,
-  ValidateNested,
 } from 'class-validator';
-
-// DTO for individual description items within the service description array
-export class DescriptionItemDto {
-  @IsOptional()
-  @IsMongoId({ message: 'Description id must be a valid Mongo id' })
-  id?: string;
-
-  @IsString({ message: 'Description text must be a string' })
-  @IsNotEmpty({ message: 'Description text is required' })
-  text!: string;
-}
 
 // DTO for creating a new service, which includes validation rules for the service properties
 export class CreateServiceDto {
-  @IsString({ message: 'Name must be a string' })
-  @IsNotEmpty({ message: 'Name is required & must be a string' })
-  title!: string;
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Type(() => String)
+  @IsString({ message: 'Category must be a string' })
+  @IsNotEmpty({ message: 'Category is required' })
+  category!: string;
 
-  @IsString({ message: 'Sub title must be a string' })
-  @IsNotEmpty({ message: 'Sub title is required & must be a string' })
-  subTitle!: string;
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Type(() => String)
+  @IsString({ message: 'Service name must be a string' })
+  @IsNotEmpty({ message: 'Service name is required' })
+  name!: string;
 
-  @IsArray({ message: 'Description must be an array' })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Type(() => String)
+  @IsString({ message: 'Description must be a string' })
   @IsNotEmpty({ message: 'Description is required' })
-  @ArrayMaxSize(4, { message: 'Maximum 4 description items are allowed' })
-  @ValidateNested({ each: true })
-  @Type(() => DescriptionItemDto)
-  description!: DescriptionItemDto[];
+  description!: string;
+
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (!Array.isArray(value)) return [];
+    return value
+      .map((item) => (typeof item === 'string' ? item.trim() : ''))
+      .filter((item) => item.length > 0);
+  })
+  @IsArray({ message: 'Points must be an array of strings' })
+  @ArrayMaxSize(10, { message: 'Maximum 10 points are allowed' })
+  @IsString({ each: true, message: 'Each point must be a string' })
+  @IsNotEmpty({ each: true, message: 'Point text cannot be empty' })
+  points?: string[] = [];
+
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'string') return value.toLowerCase() === 'true';
+    return value;
+  })
+  @IsBoolean({ message: 'isPremiumIncluded must be a boolean' })
+  isPremiumIncluded?: boolean = false;
 }

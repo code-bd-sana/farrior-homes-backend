@@ -15,14 +15,11 @@ export class Service {
   @Prop({ required: true, trim: true })
   description!: string;
 
-  @Prop({ required: true, trim: true })
-  price!: string;
+  @Prop({ type: [String], default: [] })
+  points!: string[];
 
   @Prop({ required: true, default: false })
   isPremiumIncluded!: boolean;
-
-  @Prop({ required: true, default: 1, min: 1, index: true })
-  order!: number;
 }
 
 export const ServiceSchema = SchemaFactory.createForClass(Service);

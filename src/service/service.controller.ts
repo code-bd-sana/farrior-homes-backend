@@ -26,7 +26,7 @@ export class ServiceController {
   /**
    * Create a new service
    *
-   * @param createServiceDto - An object containing the details of the service to be created, such as name, description, price, etc. This data is expected to be validated against the CreateServiceDto class before being passed to this method.
+   * @param createServiceDto - An object containing the details of the service to be created.
    * @returns The newly created service document from the database, which includes all the details of the service along with its unique identifier (_id) and timestamps (createdAt, updatedAt).
    */
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -37,9 +37,7 @@ export class ServiceController {
   }
 
   /**
-   * Fetch all services from the database
-   *
-   * @returns An array of service documents, each containing the details of a service along with its unique identifier (_id) and timestamps (createdAt, updatedAt). The services are sorted in descending order based on their creation date.
+   * Fetch all services from the database.
    */
   @Get('many')
   findAll(@Query() query: PaginationDto) {

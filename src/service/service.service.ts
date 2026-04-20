@@ -9,10 +9,12 @@ import { MongoIdDto } from 'src/common/dto/mongoId.dto';
 
 const PREDEFINED_CATEGORY_ORDER = [
   'Full Service',
+  'Investor & Unrepresented Seller Services',
   'Consultations',
   'Rental Services',
-  'BPO Services',
-  'Market Analysis',
+  'Residential BPO Services',
+  'Commercial BPO Services',
+  'Comparative Market Analysis',
 ] as const;
 
 @Injectable()
@@ -25,7 +27,7 @@ export class ServiceService {
   /**
    * Create a new service
    *
-   * @param createServiceDto - Data Transfer Object containing the details of the service to be created, such as name, description, price, etc. This DTO is expected to be validated against the CreateServiceDto class.
+   * @param createServiceDto - Data Transfer Object containing the details of the service to be created.
    * @returns The newly created service document from the database, which includes all the details of the service along with its unique identifier (_id) and timestamps (createdAt, updatedAt).
    * @throws BadRequestException if the provided data is invalid or fails validation checks defined in the CreateServiceDto class.
    * @throws InternalServerErrorException if there is an error while saving the service to the database.
@@ -35,7 +37,6 @@ export class ServiceService {
       this.normalizeServicePayload({
         ...createServiceDto,
         isPremiumIncluded: createServiceDto.isPremiumIncluded ?? false,
-        order: createServiceDto.order ?? 1,
       }),
     );
     const savedService = await createdService.save();
@@ -47,10 +48,7 @@ export class ServiceService {
   }
 
   /**
-   * Fetch all services from the database
-   *
-   * @returns An array of service documents, each containing the details of a service along with its unique identifier (_id) and timestamps (createdAt, updatedAt). The services are sorted in descending order based on their creation date.
-   * @throws InternalServerErrorException if there is an error while fetching the services from the database.
+   * Fetch all services from the database.
    */
   async findAll(query: PaginationDto) {
     const page = query.page ?? 1;
@@ -63,7 +61,7 @@ export class ServiceService {
             { category: { $regex: search, $options: 'i' } },
             { name: { $regex: search, $options: 'i' } },
             { description: { $regex: search, $options: 'i' } },
-            { price: { $regex: search, $options: 'i' } },
+            { points: { $regex: search, $options: 'i' } },
           ],
         }
       : {};
@@ -158,14 +156,14 @@ export class ServiceService {
     if (typeof payload.description === 'string') {
       normalized.description = payload.description.trim();
     }
-    if (typeof payload.price === 'string') {
-      normalized.price = payload.price.trim();
+    if (Array.isArray(payload.points)) {
+      normalized.points = payload.points
+        .filter((item): item is string => typeof item === 'string')
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0);
     }
     if (typeof payload.isPremiumIncluded === 'boolean') {
       normalized.isPremiumIncluded = payload.isPremiumIncluded;
-    }
-    if (typeof payload.order === 'number') {
-      normalized.order = payload.order;
     }
 
     return normalized;
@@ -179,9 +177,9 @@ export class ServiceService {
     return index === -1 ? PREDEFINED_CATEGORY_ORDER.length : index;
   }
 
-  private sortServices<
-    T extends { category?: string; order?: number; name?: string },
-  >(services: T[]): T[] {
+  private sortServices<T extends { category?: string; name?: string }>(
+    services: T[],
+  ): T[] {
     return [...services].sort((a, b) => {
       const aCategory = (a.category ?? '').trim();
       const bCategory = (b.category ?? '').trim();
@@ -195,11 +193,6 @@ export class ServiceService {
       const categoryNameDifference = aCategory.localeCompare(bCategory);
       if (categoryNameDifference !== 0) {
         return categoryNameDifference;
-      }
-
-      const orderDifference = (a.order ?? 1) - (b.order ?? 1);
-      if (orderDifference !== 0) {
-        return orderDifference;
       }
 
       return (a.name ?? '').localeCompare(b.name ?? '');

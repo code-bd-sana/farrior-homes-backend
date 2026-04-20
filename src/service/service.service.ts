@@ -1,15 +1,19 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Service, ServiceDocument } from 'src/schemas/service.schema';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 import { PaginatedMetaDto, PaginationDto } from 'src/common/dto/pagination.dto';
 import { MongoIdDto } from 'src/common/dto/mongoId.dto';
+
+const PREDEFINED_CATEGORY_ORDER = [
+  'Full Service',
+  'Consultations',
+  'Rental Services',
+  'BPO Services',
+  'Market Analysis',
+] as const;
 
 @Injectable()
 export class ServiceService {
@@ -27,13 +31,13 @@ export class ServiceService {
    * @throws InternalServerErrorException if there is an error while saving the service to the database.
    */
   async create(createServiceDto: CreateServiceDto) {
-    const createdService = new this.serviceModel({
-      ...createServiceDto,
-      description: this.normalizeDescription(
-        createServiceDto.description,
-        false,
-      ),
-    });
+    const createdService = new this.serviceModel(
+      this.normalizeServicePayload({
+        ...createServiceDto,
+        isPremiumIncluded: createServiceDto.isPremiumIncluded ?? false,
+        order: createServiceDto.order ?? 1,
+      }),
+    );
     const savedService = await createdService.save();
 
     return {
@@ -53,24 +57,25 @@ export class ServiceService {
     const limit = query.limit ?? 10;
     const search = query.search?.trim();
 
-    const filter = search
+    const filter: Record<string, unknown> = search
       ? {
           $or: [
-            { title: { $regex: search, $options: 'i' } },
-            { subTitle: { $regex: search, $options: 'i' } },
-            { 'description.text': { $regex: search, $options: 'i' } },
+            { category: { $regex: search, $options: 'i' } },
+            { name: { $regex: search, $options: 'i' } },
+            { description: { $regex: search, $options: 'i' } },
+            { price: { $regex: search, $options: 'i' } },
           ],
         }
       : {};
 
-    const [services, total] = await Promise.all([
-      this.serviceModel
-        .find(filter)
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(limit),
+    const [matchedServices, total] = await Promise.all([
+      this.serviceModel.find(filter).lean(),
       this.serviceModel.countDocuments(filter),
     ]);
+
+    const sortedServices = this.sortServices(matchedServices);
+    const start = (page - 1) * limit;
+    const services = sortedServices.slice(start, start + limit);
 
     const totalPages = Math.ceil(total / limit) || 1;
     const pagination: PaginatedMetaDto = {
@@ -106,16 +111,7 @@ export class ServiceService {
   }
 
   async update(id: MongoIdDto['id'], updateServiceDto: UpdateServiceDto) {
-    const updatePayload = {
-      ...updateServiceDto,
-      ...(updateServiceDto.description
-        ? {
-            description: this.normalizeDescription(
-              updateServiceDto.description,
-            ),
-          }
-        : {}),
-    };
+    const updatePayload = this.normalizeServicePayload(updateServiceDto);
 
     const updatedService = await this.serviceModel.findByIdAndUpdate(
       id,
@@ -148,17 +144,65 @@ export class ServiceService {
     };
   }
 
-  // Helper method to normalize the description array by ensuring each item has a valid ObjectId and trimming the text
-  private normalizeDescription(
-    description: { id?: string; text: string }[],
-    preserveIncomingId = true,
-  ) {
-    return description.map((item) => ({
-      id:
-        MongoIdDto['id'] && item.id && Types.ObjectId.isValid(item.id)
-          ? new Types.ObjectId(item.id)
-          : new Types.ObjectId(),
-      text: item.text.trim(),
-    }));
+  private normalizeServicePayload(
+    payload: Partial<CreateServiceDto | UpdateServiceDto>,
+  ): Partial<CreateServiceDto> {
+    const normalized: Partial<CreateServiceDto> = {};
+
+    if (typeof payload.category === 'string') {
+      normalized.category = payload.category.trim();
+    }
+    if (typeof payload.name === 'string') {
+      normalized.name = payload.name.trim();
+    }
+    if (typeof payload.description === 'string') {
+      normalized.description = payload.description.trim();
+    }
+    if (typeof payload.price === 'string') {
+      normalized.price = payload.price.trim();
+    }
+    if (typeof payload.isPremiumIncluded === 'boolean') {
+      normalized.isPremiumIncluded = payload.isPremiumIncluded;
+    }
+    if (typeof payload.order === 'number') {
+      normalized.order = payload.order;
+    }
+
+    return normalized;
+  }
+
+  private getCategoryRank(category: string): number {
+    const index = PREDEFINED_CATEGORY_ORDER.findIndex(
+      (item) => item.toLowerCase() === category.toLowerCase(),
+    );
+
+    return index === -1 ? PREDEFINED_CATEGORY_ORDER.length : index;
+  }
+
+  private sortServices<
+    T extends { category?: string; order?: number; name?: string },
+  >(services: T[]): T[] {
+    return [...services].sort((a, b) => {
+      const aCategory = (a.category ?? '').trim();
+      const bCategory = (b.category ?? '').trim();
+
+      const categoryRankDifference =
+        this.getCategoryRank(aCategory) - this.getCategoryRank(bCategory);
+      if (categoryRankDifference !== 0) {
+        return categoryRankDifference;
+      }
+
+      const categoryNameDifference = aCategory.localeCompare(bCategory);
+      if (categoryNameDifference !== 0) {
+        return categoryNameDifference;
+      }
+
+      const orderDifference = (a.order ?? 1) - (b.order ?? 1);
+      if (orderDifference !== 0) {
+        return orderDifference;
+      }
+
+      return (a.name ?? '').localeCompare(b.name ?? '');
+    });
   }
 }

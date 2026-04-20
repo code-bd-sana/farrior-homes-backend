@@ -1,39 +1,51 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
-  ArrayMaxSize,
-  IsArray,
-  IsMongoId,
+  IsBoolean,
+  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
-  ValidateNested,
+  Min,
 } from 'class-validator';
-
-// DTO for individual description items within the service description array
-export class DescriptionItemDto {
-  @IsOptional()
-  @IsMongoId({ message: 'Description id must be a valid Mongo id' })
-  id?: string;
-
-  @IsString({ message: 'Description text must be a string' })
-  @IsNotEmpty({ message: 'Description text is required' })
-  text!: string;
-}
 
 // DTO for creating a new service, which includes validation rules for the service properties
 export class CreateServiceDto {
-  @IsString({ message: 'Name must be a string' })
-  @IsNotEmpty({ message: 'Name is required & must be a string' })
-  title!: string;
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Type(() => String)
+  @IsString({ message: 'Category must be a string' })
+  @IsNotEmpty({ message: 'Category is required' })
+  category!: string;
 
-  @IsString({ message: 'Sub title must be a string' })
-  @IsNotEmpty({ message: 'Sub title is required & must be a string' })
-  subTitle!: string;
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Type(() => String)
+  @IsString({ message: 'Service name must be a string' })
+  @IsNotEmpty({ message: 'Service name is required' })
+  name!: string;
 
-  @IsArray({ message: 'Description must be an array' })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Type(() => String)
+  @IsString({ message: 'Description must be a string' })
   @IsNotEmpty({ message: 'Description is required' })
-  @ArrayMaxSize(4, { message: 'Maximum 4 description items are allowed' })
-  @ValidateNested({ each: true })
-  @Type(() => DescriptionItemDto)
-  description!: DescriptionItemDto[];
+  description!: string;
+
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Type(() => String)
+  @IsString({ message: 'Price must be a string' })
+  @IsNotEmpty({ message: 'Price is required' })
+  price!: string;
+
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'string') return value.toLowerCase() === 'true';
+    return value;
+  })
+  @IsBoolean({ message: 'isPremiumIncluded must be a boolean' })
+  isPremiumIncluded?: boolean = false;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: 'Order must be an integer' })
+  @Min(1, { message: 'Order must be at least 1' })
+  order?: number = 1;
 }
